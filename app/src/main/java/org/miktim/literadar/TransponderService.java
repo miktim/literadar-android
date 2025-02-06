@@ -1,3 +1,10 @@
+/*
+ * LiteRadar Service, MIT (c) 2021-2025 miktim@mail.ru
+ * Thanks to:
+ *   developer.android.com
+ *   stackoverflow.com
+ */
+
 package org.miktim.literadar;
 
 import android.app.Service;
@@ -10,6 +17,7 @@ import android.os.IBinder;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import org.miktim.Notifier;
 import org.miktim.udpsocket.UdpSocket;
 
 import java.io.IOException;
@@ -46,7 +54,7 @@ public class TransponderService extends Service {
         }
     };
     LocalBroadcastManager mLocalBroadcastManager;
-
+    Notifier mNotifier;
     UdpSocket mUdpSocket;
     UdpSocket.Handler mUdpSocketHandler = new UdpSocket.Handler() {
         @Override
@@ -80,25 +88,30 @@ public class TransponderService extends Service {
 
     @Override
     public void onCreate() {
+        mNotifier = new Notifier(this,R.drawable.ic_stat_service,
+                "LiteRadar mode:" +
+                        getResources().getStringArray(R.array.mode_array)[mSettings.getMode()]);
+        mNotifier.setActivity(new Intent(this, SettingsActivity.class));
+        mNotifier.setPriority(Notifier.PRIORITY_MAX);
+
         MainActivity.sService = this;
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(SettingsActivity.ACTION_EXIT);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
-        mLocationProvider = new LocationProvider(this,mLocationHandler);
-        mLocationProvider.connect(mSettings.locations.timeout, mSettings.locations.minDistance);
+//        mLocationProvider = new LocationProvider(this,mLocationHandler);
+//        mLocationProvider.connect(mSettings.locations.timeout, mSettings.locations.minDistance);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startTrackerActivity();
+        startService();
         return super.onStartCommand(intent, flags, startId);
     }
 
-    public void startTrackerActivity() {
-        if(mSettings.showTracker) {
-//            startActivity(MainActivity.sTrackerIntent);
-        }
+    public void startService() {
+        mNotifier.startForeground("On air!");
+
 // todo
 //        if(settings.mode != Settings.MODE_TRACKER_ONLY) {
             try {
@@ -110,16 +123,8 @@ public class TransponderService extends Service {
                 stopSelf();
             }
  //       }
-        mDoneService = false;
-        while (!mDoneService) {
-            synchronized (this) {
-                try {
-                    wait(500);
-                } catch (Exception e) {
-                }
-            }
-        }
-
+ //       mDoneService = false;
+ //       (new Service(this)).start();
     }
 
     @Override
@@ -132,4 +137,21 @@ public class TransponderService extends Service {
         super.onDestroy();
     }
 
+    class Service extends Thread {
+        TransponderService mService;
+        Service(TransponderService service) {
+            mService = service;
+        }
+        @Override
+        public void run() {
+            while (!mDoneService) {
+                synchronized (this) {
+                    try {
+                        wait(500);
+                    } catch (Exception e) {
+                    }
+                }
+            }
+        }
+    }
 }

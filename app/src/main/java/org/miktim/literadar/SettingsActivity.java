@@ -1,10 +1,17 @@
+/*
+ * LiteRadar Settings Activity, MIT (c) 2021-2025 miktim@mail.ru
+ * Thanks to:
+ *   developer.android.com
+ *   stackoverflow.com
+ */
 package org.miktim.literadar;
 
+import static org.miktim.literadar.Settings.MODE_UNICAST_CLIENT;
 import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
 
-import static java.lang.String.format;
-
+import android.app.AlertDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -16,7 +23,6 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-//import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -34,12 +40,13 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 
 public class SettingsActivity extends AppCompatActivity
-        implements AdapterView.OnItemSelectedListener  {
+        implements AdapterView.OnItemSelectedListener {
     Settings mSettings;
     static final String ACTION_EXIT = "org.literadar.exit";
     static final String ACTION_RESTART = "org.literadar.restart";
     String[] mInterfaceArray;
-//    String[] mModeList;
+    CheckBox mTrackerChk;
+    EditText mAddressEdt;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -47,6 +54,8 @@ public class SettingsActivity extends AppCompatActivity
         supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_settings);
 
+        mTrackerChk = findViewById(R.id.trackerChk);
+        mAddressEdt = findViewById(R.id.addressEdt);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -57,43 +66,30 @@ public class SettingsActivity extends AppCompatActivity
 
     }
 
-    void setEditText(View v, String s) {
-        ((EditText) v).setText(s);
-        ((EditText) v).setHint(s);
-    }
-
     void fillLayout() {
         ((TextView) findViewById(R.id.titleTxt)).setText(resString(R.string.app_name));
         ((TextView) findViewById(R.id.keyTxt)).setText(resString(R.string.keyLbl));
-// todo key timestamp
-        ((TextView) findViewById(R.id.keyDateTxt)).setText(resString(R.string.key_dateLbl)
-        + new SimpleDateFormat("yyyy-MM-dd").format(mSettings.getKeyTimeStamp()));
-// todo replace tag with clip button
+        ((TextView) findViewById(R.id.keyDateTxt))
+                .setText(String.format("%s%s",
+                        resString(R.string.key_dateLbl),
+                        new SimpleDateFormat("yyyy-MM-dd").
+                                format(mSettings.getKeyTimeStamp())));
+
         String iName = mSettings.network.interfaceName;
         mInterfaceArray = getInterfaceList(iName);
         initDropdownList(findViewById(R.id.interfaceSpn), mInterfaceArray,
                 getListIndex(mInterfaceArray, iName));
         initDropdownList(findViewById(R.id.modeSpn), getResources().getStringArray(R.array.mode_array), mSettings.mode);
-        ((CheckBox)findViewById(R.id.trackerChk)).setChecked(mSettings.showTracker);
-        ((EditText) findViewById(R.id.addressEdt)).setText(mSettings.network.getAddress(mSettings.getMode()));
-
+        modeDependedSettings(mSettings.mode); // sets address, tracker enabled
     }
 
     int getListIndex(String[] iList, String itemName) {
+// get listIndex by itemName
         for (int i = 0; itemName != null && i < iList.length; i++)
             if (iList[i].startsWith(itemName)) return i;
         return 0;
     }
-/* todo
-    String getSelectedInterfaceName(Spinner spinner) {
-        int i = spinner.getSelectedItemPosition();
-        if (spinner.getId() == R.id.interfaceLst) {
-            if (i == 0) return "";
-            return mInterfacesList[i].split("/")[0];
-        }
-        return i;
-    }
-*/
+
     void initDropdownList(Spinner s, String[] items, int pos) {
 // https://stackoverflow.com/questions/13377361/how-to-create-a-drop-down-list
         ArrayAdapter<String> adapter =
@@ -104,8 +100,31 @@ public class SettingsActivity extends AppCompatActivity
         s.setSelection(pos);
     }
 
-    void fillSettings(){
-
+    void modeDependedSettings(int mode) {
+        mSettings.setMode(mode);
+        String address = mSettings.network.getAddress(mode);
+        switch (mode) {
+            case Settings.MODE_TRACKER_ONLY: {
+                mTrackerChk.setChecked(true);
+                mTrackerChk.setEnabled(false);
+                mAddressEdt.setEnabled(false);
+                address = "";
+                break;
+            }
+            case Settings.MODE_MULTICAST_MEMBER: {
+                mTrackerChk.setChecked(mSettings.getTrackerEnabled());
+                mTrackerChk.setEnabled(true);
+                mAddressEdt.setEnabled(false);
+                break;
+            }
+            case Settings.MODE_UNICAST_CLIENT: {
+                mTrackerChk.setChecked(mSettings.getTrackerEnabled());
+                mTrackerChk.setEnabled(true);
+                mAddressEdt.setEnabled(true);
+                break;
+            }
+        }
+        mAddressEdt.setText(address);
     }
 
     String[] getInterfaceList(String iName) {
@@ -113,7 +132,7 @@ public class SettingsActivity extends AppCompatActivity
         niList.add(resString(R.string.all_interfaces));
         try {
             Enumeration<NetworkInterface> niEnum = NetworkInterface.getNetworkInterfaces();
-            while ( niEnum.hasMoreElements() ) {
+            while (niEnum.hasMoreElements()) {
                 NetworkInterface ni = niEnum.nextElement();
                 String niDn = ni.getDisplayName();
                 InetAddress ia = mSettings.network.getInet4Address(ni);
@@ -129,62 +148,95 @@ public class SettingsActivity extends AppCompatActivity
     }
 
     String resString(int resString) {
-        return(getResources().getString(resString));
+        return (getResources().getString(resString));
     }
 
-    void loadSettings(Context context) {
-        File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
-        try(FileInputStream fis = new FileInputStream(file) ) {
-            if (!file.exists()) {
-                mSettings.create();
-//                saveSettings(context);
-            } else {
-                mSettings.load(fis);
-            }
-        } catch (Exception e) {
-//
-            finish();
-        }
-    }
-    void saveSettings(Context context) {
-        File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
-        try(FileOutputStream fos = new FileOutputStream(file)) {
-            mSettings.save(fos);
-        } catch (Exception e) {
-//            e.printStackTrace();
-            finish();
-        }
-    }
     public void clipTagClicked(View v) {
-
-    }
-    public void trackerChkClicked(View v) {
-
-    }
-    public void cancelBtnClicked(View v) {
-        finish();
-    }
-    public void exitBtnClicked(View v) {
-        sendBroadcast(this, new Intent(ACTION_EXIT));
-        finish();
-    }
-    public void restartBtnClicked(View v) {
-        fillSettings();
-        saveSettings(this);
-        sendBroadcast(this, new Intent(ACTION_RESTART));
-        finish();
-    }
-    void sendBroadcast(Context context, Intent intent) {
-        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
+// todo
     }
 
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-
+        Spinner spinner = (Spinner) parent;
+        switch (parent.getId()) {
+            case R.id.modeSpn: {
+                modeDependedSettings(position);
+                break;
+            }
+            case R.id.interfaceSpn: {
+                try {
+                    mSettings.network.setInterface(
+                            spinner.getSelectedItem().toString().split("/")[0]);
+                } catch (SocketException e) {
+                    e.printStackTrace();
+                }
+                break;
+            }
+        }
     }
 
     @Override
     public void onNothingSelected(AdapterView<?> parent) {
+    }
 
+    public void trackerChkClicked(View v) {
+        mSettings.setTrackerEnabled(mTrackerChk.isChecked());
+    }
+
+    boolean fillSettings() {
+        String address = mAddressEdt.getText().toString();
+        try {
+            if (mSettings.getMode() == MODE_UNICAST_CLIENT)
+                mSettings.network.setRemoteAddress(
+                        address.isEmpty() ? null : address);
+        } catch (Exception e) {
+            MainActivity.showDialog(this,
+                    resString(R.string.err_wrong_address),
+                    resString(R.string.required_address),
+                    "Ok");
+            mAddressEdt.requestFocus();
+            return false;
+        }
+        return true;
+    }
+
+    void saveSettings(Context context) {
+        File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            mSettings.save(fos);
+            MainActivity.sSettings = mSettings;
+        } catch (Exception e) {
+            MainActivity.showDialog(this,
+                    resString(R.string.err_io),
+                    e.getLocalizedMessage(),
+                    resString(R.string.exitLbl));
+            e.printStackTrace();
+            exitLiteRadar();
+        }
+    }
+
+    public void cancelBtnClicked(View v) {
+        finish();
+    }
+
+    public void exitBtnClicked(View v) {
+        exitLiteRadar();
+    }
+
+    void exitLiteRadar() {
+        sendBroadcast(this, new Intent(ACTION_EXIT));
+        finish();
+    }
+
+    public void restartBtnClicked(View v) {
+        if (fillSettings()) { // returns false on illegal params
+            saveSettings(this);
+            sendBroadcast(this, new Intent(ACTION_RESTART));
+            finish();
+        }
+    }
+
+    void sendBroadcast(Context context, Intent intent) {
+        LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
 }

@@ -1,3 +1,10 @@
+/*
+ * LiteRadar Tracker Activity, MIT (c) 2021-2025 miktim@mail.ru
+ * Thanks to:
+ *   developer.android.com
+ *   stackoverflow.com
+ */
+
 package org.miktim.literadar;
 
 import android.annotation.SuppressLint;

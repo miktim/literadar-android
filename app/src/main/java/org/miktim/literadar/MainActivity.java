@@ -1,29 +1,34 @@
+/*
+ * LiteRadar Main Activity, MIT (c) 2021-2025 miktim@mail.ru
+ * Thanks to:
+ *   developer.android.com
+ *   stackoverflow.com
+ */
+
 package org.miktim.literadar;
 
 import static android.content.pm.PackageManager.PERMISSION_DENIED;
 
+import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
+
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.os.StrictMode;
-import android.util.Log;
 
-import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import java.security.InvalidAlgorithmParameterException;
-import java.security.NoSuchAlgorithmException;
-import java.security.Permission;
-import java.security.spec.InvalidKeySpecException;
+import java.io.File;
+import java.io.FileInputStream;
 
 public class MainActivity extends AppCompatActivity {
     static Settings sSettings;
@@ -38,7 +43,6 @@ public class MainActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (action.equals(SettingsActivity.ACTION_EXIT)) {
-                stopTrackerActivity();
                 finish();
             } else if (action.equals(SettingsActivity.ACTION_RESTART)){
                 startTrackerActivity();
@@ -62,22 +66,27 @@ public class MainActivity extends AppCompatActivity {
         mTrackerIntent = new Intent(this, TrackerActivity.class);
         mTrackerIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 
-//todo requestPermissions FINE_LOCATION
         checkPermission(Manifest.permission.ACCESS_FINE_LOCATION,FINE_LOCATION_GRANTED);
+    }
+    @Override
+    public void finish () {
+        closeTrackerActivity();
+        mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
+        super.finish();
+//        System.exit(0);
     }
 
     void permissionsGranted() {
         if(sSettings == null) {
-// todo must be load settings
-            sSettings = new Settings();
             try {
-                sSettings.create();
+                sSettings = new Settings();
+                loadSettings(this);
+                startService(new Intent(this, TransponderService.class));
+                startTrackerActivity();
+                startActivity(new Intent(this, SettingsActivity.class));
             } catch (Exception e) {
                 e.printStackTrace();
             }
-//todo            startService(new Intent(this, TransponderService.class));
-            startTrackerActivity();
-            startActivity(new Intent(this, SettingsActivity.class));
         }
     }
 
@@ -108,15 +117,55 @@ public class MainActivity extends AppCompatActivity {
         }    else {
             finish();
         }
+    }
 
+    static void showDialog(Context context, String title, String message, String okText) {
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+// Add the buttons.
+        builder.setPositiveButton(okText, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User taps OK button.
+            }
+        });
+/*
+        builder.setNegativeButton(R.string.cancelLbl, new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int id) {
+                // User cancels the dialog.
+            }
+        });
+*/
+        builder.setMessage(message).setTitle(title);
+        AlertDialog dialog = builder.create();
+        dialog.show();
     }
+
+    void loadSettings(Context context) {
+        File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
+        try (FileInputStream fis = new FileInputStream(file)) {
+            if (file.exists()) {
+                sSettings.load(fis);
+            }
+        } catch (Exception e) {
+            MainActivity.showDialog(this,
+                    resString(R.string.err_io),
+                    e.getLocalizedMessage(),
+                    resString(R.string.exitLbl));
+            e.printStackTrace();
+            finish();
+        }
+    }
+
+    String resString(int resString) {
+        return (getResources().getString(resString));
+    }
+
     void startTrackerActivity() {
-        if(sSettings.showTracker && sTracker == null)
+        if(sSettings.showTracker)// && sTracker == null)
             startActivity(mTrackerIntent);
-        else if(!sSettings.showTracker && sTracker != null)
-            stopTrackerActivity();
+        else //if(!sSettings.showTracker)
+            closeTrackerActivity();
     }
-    void stopTrackerActivity() {
+    void closeTrackerActivity(){
         sendBroadcast(this, new Intent(ACTION_CLOSE));
     }
 
@@ -124,10 +173,4 @@ public class MainActivity extends AppCompatActivity {
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
 
-    @Override
-    public void finish () {
-        mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
-        super.finish();
-//        System.exit(0);
-    }
 }

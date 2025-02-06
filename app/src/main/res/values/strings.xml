@@ -16,5 +16,8 @@
     <string name="exitLbl">Exit LiteRadar</string>
     <string name="cancelLbl">Cancel</string>
     <string name="restartLbl">Save &amp; Restart</string>
+    <string name="err_wrong_address">Wrong or missed address!</string>
+    <string name="required_address">Required: ip:port or host:port</string>
+    <string name="err_io">File io error. Exit.</string>
 
 </resources>
