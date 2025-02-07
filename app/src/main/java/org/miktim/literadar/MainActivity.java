@@ -18,8 +18,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.Window;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -33,10 +35,11 @@ import java.io.FileInputStream;
 public class MainActivity extends AppCompatActivity {
     static Settings sSettings;
     static TransponderService sService;//?
-    static String ACTION_CLOSE = "org.literadar.close";
     static TrackerActivity sTracker;
+    static String ACTION_CLOSE = "org.literadar.close";
     static int FINE_LOCATION_GRANTED = 256;
-    Intent mTrackerIntent;
+    static Intent sTrackerIntent;
+    static Intent sSettingsIntent;
 
     BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -56,6 +59,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 // hide main activity
 //        setContentView(R.layout.activity_main);
+//        this.getTheme().applyStyle(R.style.AppTheme_Invisible, true);
+//        ActivityCompat.recreate(this);
 
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
@@ -63,9 +68,12 @@ public class MainActivity extends AppCompatActivity {
         intentFilter.addAction(SettingsActivity.ACTION_RESTART);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
 
-        mTrackerIntent = new Intent(this, TrackerActivity.class);
-        mTrackerIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
+        sTrackerIntent = new Intent(this, TrackerActivity.class);
+// https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_NEW_TASK
+        sTrackerIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        sSettingsIntent = new Intent(this, SettingsActivity.class);
+        sSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//
         checkPermission(Manifest.permission.ACCESS_FINE_LOCATION,FINE_LOCATION_GRANTED);
     }
     @Override
@@ -81,13 +89,23 @@ public class MainActivity extends AppCompatActivity {
             try {
                 sSettings = new Settings();
                 loadSettings(this);
-                startService(new Intent(this, TransponderService.class));
                 startTrackerActivity();
-                startActivity(new Intent(this, SettingsActivity.class));
+                startService(new Intent(this, TransponderService.class));
+                startActivity(sSettingsIntent);
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
+    }
+
+    void startTrackerActivity() {
+        if(sSettings.showTracker && sTracker == null)
+            startActivity(sTrackerIntent);
+        else if(!sSettings.showTracker)
+            closeTrackerActivity();
+    }
+    void closeTrackerActivity(){
+        sendBroadcast(this, new Intent(ACTION_CLOSE));
     }
 
     public void checkPermission(String permission, int requestCode)
@@ -157,16 +175,6 @@ public class MainActivity extends AppCompatActivity {
 
     String resString(int resString) {
         return (getResources().getString(resString));
-    }
-
-    void startTrackerActivity() {
-        if(sSettings.showTracker)// && sTracker == null)
-            startActivity(mTrackerIntent);
-        else //if(!sSettings.showTracker)
-            closeTrackerActivity();
-    }
-    void closeTrackerActivity(){
-        sendBroadcast(this, new Intent(ACTION_CLOSE));
     }
 
     void sendBroadcast(Context context, Intent intent) {

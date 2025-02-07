@@ -34,6 +34,7 @@ import java.util.Objects;
 public class TrackerActivity extends AppCompatActivity {
     //    private FrameLayout mWebContainer;
     private WebView mWebView;
+//    private boolean done = false;
 
     LocalBroadcastManager mLocalBroadcastManager;
 
@@ -46,6 +47,7 @@ public class TrackerActivity extends AppCompatActivity {
 //                mWebView.loadUrl("javascript: Tracker.webview.toTracker('" + msg + "')");
             } else if (action.equals(MainActivity.ACTION_CLOSE) ||
                     action.equals(SettingsActivity.ACTION_EXIT)) {
+//                done = true;
                 finish();
             }
         }
@@ -58,6 +60,7 @@ public class TrackerActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tracker);
 
+        MainActivity.sTracker = this;
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(SettingsActivity.ACTION_EXIT);
@@ -99,8 +102,12 @@ public class TrackerActivity extends AppCompatActivity {
     mWebView.addJavascriptInterface(new FromTracker(this), "Android");
 
         mWebView.loadUrl(url);
-        MainActivity.sTracker = this;
     }
+
+    String resString(int resString) {
+        return (getResources().getString(resString));
+    }
+
     public class FromTracker {
         Context mContext;
 
@@ -120,15 +127,26 @@ public class TrackerActivity extends AppCompatActivity {
     public void onStart() {
         super.onStart();
     }
+/*
+    @Override
+    protected void onStop(){
+        super.onStop();
+        Intent intent = new Intent(this, TrackerActivity.class);
+        startActivity(intent);
+    }
+*/
 
-    /*
-        @Override
-        public void onBackPressed() {
+    @Override
+    public void onBackPressed() {
+//        if (mApplication.isServiceStarted())
             moveTaskToBack(true);
-        }
-    */
+//        else finish();
+    }
+
+
     @Override
     protected void onDestroy() {
+        MainActivity.sTracker = null;
         Log.d("TrackerActivity", "OnDestroy");
         mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
         destroyWebView();

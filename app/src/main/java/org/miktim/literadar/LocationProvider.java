@@ -6,6 +6,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.util.Log;
 
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -18,6 +19,10 @@ public class LocationProvider {
 
     public LocationProvider(Context context, Handler handler){
         mHandler = handler;
+        List<String> mProviders;
+        LocationManager mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        mProviders = mLocationManager.getAllProviders();
+
         mSatProvider = new Provider(context, LocationManager.GPS_PROVIDER);
         mNetProvider = new Provider(context, LocationManager.NETWORK_PROVIDER);
     }
