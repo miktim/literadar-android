@@ -17,12 +17,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
-import android.location.LocationListener;
-import android.location.LocationManager;
-import android.os.Bundle;
 import android.os.IBinder;
 
-import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import org.miktim.Notifier;
@@ -31,23 +27,46 @@ import org.miktim.udpsocket.UdpSocket;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
-import java.util.List;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
 
 public class TransponderService extends Service {
-    static String ACTION_PAKET = "org.literadar.paket";
-    static String ACTION_PAKET_EXTRA = "json";
+    static String ACTION_PACKET = "org.literadar.packet";
+    static String ACTION_PACKET_EXTRA = "json";
     Settings mSettings = sSettings;
     boolean mDoneService = false;
 
+    Packet mIncomingPacket = new Packet();
+    Packet mOutgoingPacket;
     LocationProvider mLocationProvider;
     LocationProvider.Handler mLocationHandler = new LocationProvider.Handler() {
         @Override
-        public void onLocationChanged(Location location) {
-
+        public void onLocationChanged(Context context, Location location) {
+            if(location == null) return;
+            mOutgoingPacket.updateLocation(
+                    location.getTime(),
+                    mSettings.locations.timeout,
+                    location.getLatitude(),
+                    location.getLongitude(),
+                    (int)location.getAccuracy());
+            Intent intent = new Intent(ACTION_PACKET);
+            try {
+                String json = mOutgoingPacket.toJSON();
+                intent.putExtra(ACTION_PACKET_EXTRA, json);
+                sendBroadcast(context, intent);
+                mUdpSocket.send(mOutgoingPacket.pack());
+            } catch (IOException e) {
+// todo fatal
+                e.printStackTrace();
+            } catch (java.security.GeneralSecurityException e) {
+                e.printStackTrace();
+            }
         }
 
         @Override
-        public void onOutOfLocationService() {
+        public void onOutOfLocationService(Context context) {
 
         }
     };
@@ -56,7 +75,7 @@ public class TransponderService extends Service {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (action.equals(SettingsActivity.ACTION_EXIT)) {
+            if (action.equals(MainActivity.ACTION_EXIT)) {
                 mDoneService = true;
                 stopSelf();
             }
@@ -88,6 +107,14 @@ public class TransponderService extends Service {
     };
 
     public TransponderService() {
+        try {
+// todo getDisplayName, getIconId
+            mOutgoingPacket = new Packet(mSettings.getKeyPair(), mSettings.displayName);
+            mOutgoingPacket.iconId = 4;
+        } catch (java.security.GeneralSecurityException e) {
+// todo fatal popup
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -106,7 +133,7 @@ public class TransponderService extends Service {
         MainActivity.sService = this;
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(SettingsActivity.ACTION_EXIT);
+        intentFilter.addAction(MainActivity.ACTION_EXIT);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
         mLocationProvider = new LocationProvider(this,mLocationHandler);
         mLocationProvider.connect(mSettings.locations.timeout*1000, mSettings.locations.minDistance);
@@ -153,83 +180,4 @@ public class TransponderService extends Service {
     void sendBroadcast(Context context, Intent intent) {
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
-/*
-    class Service {
-        Context mContext;
-        LocationManager mLocationManager;
-        LocationListener mLocationListener = new LocationListener();
-        List<String> mAllProviders;
-        List<LocationProvider> mLocationProviders;
-
-        Service(Context context) {
-            mContext = context;
-            mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
-            mAllProviders = mLocationManager.getAllProviders();
-            for(String provider : mAllProviders) {
-                mLocationProviders.add(new LocationProvider(mContext, new Provider(mContext,provider)));
-            }
-        }
-
-        public class Provider implements LocationListener {
-            String mProviderName;
-            LocationManager mLocationManager;
-
-            Provider(Context context, String providerName){
-                mProviderName = providerName;
-                mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-            }
-            void connect(long minTime, float minDistance) {
-//                time = minTime;
-//                if (isPermitted()) {
-//                if (isConnected()) disconnect(); //??
-                    try {
-                        mLocationManager.requestLocationUpdates(minTime, minDistance, this);
-//                    location.setTime(System.currentTimeMillis());
-//                        time = System.currentTimeMillis();
-                    } catch (SecurityException e) {
-                        e.printStackTrace();
-//                        connected = false;
-//                        permitted = false;
-                    }
-                }
-
-            void disconnect() {
-                mLocationManager.removeUpdates(this);
-//                connected = false;
-//                reachable = false;
-            }
-
-            @Override
-            public void onStatusChanged(String provider, int status, Bundle extras) {
-
-            }
-
-            @Override
-            public void onLocationChanged(@NonNull Location location) {
-
-            }
-
-            @Override
-            public void onLocationChanged(@NonNull List<Location> locations) {
-
-            }
-
-            @Override
-            public void onFlushComplete(int requestCode) {
-
-            }
-
-            @Override
-            public void onProviderEnabled(@NonNull String provider) {
-
-            }
-
-            @Override
-            public void onProviderDisabled(@NonNull String provider) {
-
-            }
-        }
-    }
-
- */
 }

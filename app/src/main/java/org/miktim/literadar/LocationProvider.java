@@ -1,11 +1,15 @@
 package org.miktim.literadar;
 
+import static java.lang.String.format;
+
 import android.content.Context;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -13,96 +17,91 @@ import java.util.TimerTask;
 public class LocationProvider {
 
     public interface Handler {
-        void onLocationChanged(Location location);
-        void onOutOfLocationService();
+        void onLocationChanged(Context context, Location location);
+        void onOutOfLocationService(Context context);
     }
+    Context mContext;
+    Handler mHandler;
+    LocationManager mLocationManager;
+    List<ProviderListener> mListeners = new ArrayList<>();
+
+    private long mMinTime; // milliseconds
+    private float mMinDistance; // meters
+    private Location mLastLocation = null;
+    private Location mLocation = new Location("");
+    long mLastTime = 0;
+    private Timer mTimer;
 
     public LocationProvider(Context context, Handler handler){
+        mContext = context;
         mHandler = handler;
-        List<String> mProviders;
-        LocationManager mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        mProviders = mLocationManager.getAllProviders();
-
-        mSatProvider = new Provider(context, LocationManager.GPS_PROVIDER);
-        mNetProvider = new Provider(context, LocationManager.NETWORK_PROVIDER);
+        mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        List<String> names = mLocationManager.getProviders(true);
+        for(String providerName : names) {
+            if(providerName.equals(LocationManager.PASSIVE_PROVIDER)) continue;
+            mListeners.add(new ProviderListener(context, providerName));
+        }
+    }
+    void renewLocation(){
+        mLocation = new Location("");
+        mLocation.setAccuracy(Float.MAX_VALUE);
+        mLastTime = System.currentTimeMillis();
     }
 
     public void connect (long minTime, float minDistance) {
-        mDistance = minDistance;
-        mTimeout = minTime;
+        mMinDistance = minDistance;
+        mMinTime = minTime;
         disconnect();
-        mSatProvider.connect(mTimeout, mDistance);
-        mNetProvider.connect(mTimeout, mDistance);
-
+        for (ProviderListener listener : mListeners) {
+            listener.connectListener(minTime, 0);// todo minDistance);
+        }
+        renewLocation();
         mTimer = new Timer();
         TimerTask timerTask = new TimerTask() {public void run() { updateLocation(); }};
-        mTimer.scheduleAtFixedRate(timerTask, mTimeout, mTimeout);
+        mTimer.scheduleAtFixedRate(timerTask, mMinTime, mMinTime);
     }
 
     public void disconnect() {
-        mSatProvider.disconnect();
-        mNetProvider.disconnect();
+        for (ProviderListener listener : mListeners) {
+            listener.disconnectListener();
+        }
         if (mTimer != null)
             try { mTimer.cancel(); } catch (Exception ignore) {}
     }
 
     private void updateLocation() {
-        try {
-//        if (!mSatProvider.isReachable() && !mNetProvider.isReachable())
-//            mHandler.onOutOfLocationService();
-            mLastLocation = mSatProvider.getProviderLocation();
-            if (mLastLocation == null) {
-                mLastLocation = mNetProvider.getProviderLocation();
-            }
-            if (mLastLocation == null) {
-                debug("NULL location " + String.format("%tT", System.currentTimeMillis()));
-                mHandler.onOutOfLocationService();
-            } else {
-                debug(mLastLocation.getProvider() + " " + String.format("%tT %tT", mLastLocation.getTime(), System.currentTimeMillis()));
-                mHandler.onLocationChanged(mLastLocation);
-            }
-        } catch (Throwable ignore) {
-// todo ??
-//            t.printStackTrace();
+        if (!mLocation.getProvider().isEmpty()) {
+            mLastLocation = mLocation;
+            Log.d("LocationProvider",
+                    format("%s %TT", mLocation.getProvider(),new Date(mLastLocation.getTime())));
         }
+        mHandler.onLocationChanged(mContext, mLastLocation);
+        renewLocation();
     }
 
-    private final Handler mHandler;
-    private long mTimeout; // milliseconds
-    private float mDistance; // meters
-    private Location mLastLocation = null;
-    private Timer mTimer;
+    private class ProviderListener implements LocationListener {
+        String mProviderName;
+        Boolean mConnected = false;
 
-    private final Provider mSatProvider;
-    private final Provider mNetProvider;
+        ProviderListener(Context context, String providerName){
+            this.mProviderName = providerName;
+        }
 
-private void debug(String msg) { Log.d("LocationProvider", msg); }
-
-    private static class Provider implements LocationListener {
-        String name;
-        boolean permitted = true;
-        boolean connected = false;
-        boolean reachable = false;
-        LocationManager manager;
-        Location location = new Location("Null");
-        long time;
-
-private void debug(String msg) { Log.d("LocationProvider " + name, msg); }
-
-        Provider(Context context, String providerName){
-            name = providerName;
-            manager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        boolean isConnected() {
+            return mConnected;
         }
 
         @Override
         public void onLocationChanged(Location location) {
-debug("onLocationChanged");
-            if (location != null && location.getTime() > this.location.getTime())
-                this.location = location;
+            synchronized (mLocation) {
+                if (location != null
+                    && location.getTime() > mLastTime
+                    && location.getAccuracy() < mLocation.getAccuracy() )
+                    mLocation = location;
+            }
         }
         @Override
         public void onStatusChanged(String s, int i, android.os.Bundle b) {
-debug("onStatusChanged: " + s);
         }
         @Override
         public void onProviderEnabled(String s) {
@@ -114,63 +113,29 @@ debug("onStatusChanged: " + s);
 
         }
 
-        boolean isPermitted() {
-            return permitted;
-        }
-        boolean isConnected() {
-            return connected;
-        }
         boolean isEnabled() {
-            return isPermitted() && manager.isProviderEnabled(name);
+            return mLocationManager.isProviderEnabled(mProviderName);
         }
         boolean isReachable() {
-debug((reachable ? "Reachable" : "UnReachable"));
-            return reachable && isEnabled();
+// todo
+//            return mLocationManager.isReachable(providerName);
+            return true;
         }
 
-        void connect(long minTime, float minDistance) {
-            time = minTime;
-            if (isPermitted()) {
-//                if (isConnected()) disconnect(); //??
-                try {
-                    manager.requestLocationUpdates(name, time-100, minDistance, this);
-//                    location.setTime(System.currentTimeMillis());
-                    time = System.currentTimeMillis();
-                    connected = true;
-                } catch (SecurityException e) {
-                    e.printStackTrace();
-                    connected = false;
-                    permitted = false;
-                }
+        void connectListener(long minTime, float minDistance) {
+            try {
+                mLocationManager.requestLocationUpdates(mProviderName, minTime, minDistance, this);
+                mConnected = true;
+            } catch (SecurityException e) {
+                e.printStackTrace();
             }
         }
 
-        void disconnect() {
-            manager.removeUpdates(this);
-            connected = false;
-            reachable = false;
-        }
-
-        Location getProviderLocation() {
-            Location newLocation;
-            if (isEnabled() && isConnected()) {
-                try {
-                    newLocation = manager.getLastKnownLocation(name);
-                    if (newLocation != null
-                            && newLocation.getTime() > time) {
-                        reachable = true;
-                        time = newLocation.getTime();
-debug("New Location "+String.format("%tT",newLocation.getTime()));
-                        return location;
-                    } else {
-debug("Null or old location "+String.format("%tT",System.currentTimeMillis()));
-                        reachable = false;
-                    }
-                } catch (SecurityException e) {
-                    e.printStackTrace();
-                }
+        void disconnectListener() {
+            if(isConnected()) {
+                mLocationManager.removeUpdates((LocationListener) this);
+                mConnected = false;
             }
-            return null;
         }
     }
 /*

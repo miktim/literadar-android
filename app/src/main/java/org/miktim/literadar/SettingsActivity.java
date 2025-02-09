@@ -43,7 +43,6 @@ import java.util.Enumeration;
 public class SettingsActivity extends AppCompatActivity
         implements AdapterView.OnItemSelectedListener {
     Settings mSettings;
-    static final String ACTION_EXIT = "org.literadar.exit";
     static final String ACTION_RESTART = "org.literadar.restart";
     String[] mInterfaceArray;
     CheckBox mTrackerChk;
@@ -225,7 +224,7 @@ public class SettingsActivity extends AppCompatActivity
     }
 
     void exitLiteRadar() {
-        sendBroadcast(this, new Intent(ACTION_EXIT));
+        sendBroadcast(this, new Intent(MainActivity.ACTION_EXIT));
         finish();
     }
 

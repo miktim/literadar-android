@@ -11,6 +11,8 @@ import static android.content.pm.PackageManager.PERMISSION_DENIED;
 
 import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
 
+import static java.lang.System.exit;
+
 import android.Manifest;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
@@ -33,10 +35,12 @@ import java.io.File;
 import java.io.FileInputStream;
 
 public class MainActivity extends AppCompatActivity {
+    static String ACTION_CLOSE = "org.literadar.close";
+    static final String ACTION_EXIT = "org.literadar.exit";
+    static MainActivity self;
     static Settings sSettings;
     static TransponderService sService;//?
     static TrackerActivity sTracker;
-    static String ACTION_CLOSE = "org.literadar.close";
     static int FINE_LOCATION_GRANTED = 256;
     static Intent sTrackerIntent;
     static Intent sSettingsIntent;
@@ -45,7 +49,7 @@ public class MainActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (action.equals(SettingsActivity.ACTION_EXIT)) {
+            if (action.equals(ACTION_EXIT)) {
                 finish();
             } else if (action.equals(SettingsActivity.ACTION_RESTART)){
                 startTrackerActivity();
@@ -58,13 +62,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 // hide main activity
-//        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main);
 //        this.getTheme().applyStyle(R.style.AppTheme_Invisible, true);
 //        ActivityCompat.recreate(this);
 
+        self = this;
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(SettingsActivity.ACTION_EXIT);
+        intentFilter.addAction(ACTION_EXIT);
         intentFilter.addAction(SettingsActivity.ACTION_RESTART);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
 
@@ -81,7 +86,11 @@ public class MainActivity extends AppCompatActivity {
         closeTrackerActivity();
         mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
         super.finish();
-//        System.exit(0);
+    }
+    @Override
+    protected void onDestroy () {
+        super.onDestroy();
+        exit(0);
     }
 
     void permissionsGranted() {
@@ -89,9 +98,10 @@ public class MainActivity extends AppCompatActivity {
             try {
                 sSettings = new Settings();
                 loadSettings(this);
+// todo map not showing samsung
                 startTrackerActivity();
-                startService(new Intent(this, TransponderService.class));
                 startActivity(sSettingsIntent);
+                startService(new Intent(this, TransponderService.class));
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -157,6 +167,16 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
+// accessed over MainActivity.self
+    void fatalDialog(Context context, Exception e) {
+        showDialog(context,
+                "FATAL: " + e.toString(),
+                e.getMessage(),
+               "Exit LiteRadar" );
+        sendBroadcast(this,new Intent(ACTION_EXIT));
+        finish();
+    }
+
     void loadSettings(Context context) {
         File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
         try (FileInputStream fis = new FileInputStream(file)) {
@@ -173,11 +193,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    String resString(int resString) {
-        return (getResources().getString(resString));
+    String resString(int resId) {
+        return (getResources().getString(resId));
     }
 
-    void sendBroadcast(Context context, Intent intent) {
+    static void sendBroadcast(Context context, Intent intent) {
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
 

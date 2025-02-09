@@ -20,7 +20,6 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.FrameLayout;
 
 //import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
@@ -28,8 +27,6 @@ import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
-
-import java.util.Objects;
 
 public class TrackerActivity extends AppCompatActivity {
     //    private FrameLayout mWebContainer;
@@ -42,11 +39,11 @@ public class TrackerActivity extends AppCompatActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (action.equals(TransponderService.ACTION_PAKET)) {
-                String msg = intent.getStringExtra(TransponderService.ACTION_PAKET_EXTRA);
-//                mWebView.loadUrl("javascript: Tracker.webview.toTracker('" + msg + "')");
+            if (action.equals(TransponderService.ACTION_PACKET)) {
+                String msg = intent.getStringExtra(TransponderService.ACTION_PACKET_EXTRA);
+                mWebView.loadUrl("javascript: Tracker.webview.toTracker('" + msg + "')");
             } else if (action.equals(MainActivity.ACTION_CLOSE) ||
-                    action.equals(SettingsActivity.ACTION_EXIT)) {
+                    action.equals(MainActivity.ACTION_EXIT)) {
 //                done = true;
                 finish();
             }
@@ -63,8 +60,8 @@ public class TrackerActivity extends AppCompatActivity {
         MainActivity.sTracker = this;
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(SettingsActivity.ACTION_EXIT);
-        intentFilter.addAction(TransponderService.ACTION_PAKET);
+        intentFilter.addAction(MainActivity.ACTION_EXIT);
+        intentFilter.addAction(TransponderService.ACTION_PACKET);
         intentFilter.addAction(MainActivity.ACTION_CLOSE);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
@@ -91,14 +88,17 @@ public class TrackerActivity extends AppCompatActivity {
         String url = MainActivity.sSettings.trackerUrl;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) { // Android 4.4
             WebView.setWebContentsDebuggingEnabled(true);
-//            url = url.replace("mode=", "mode=debug");
+            if (BuildConfig.DEBUG) {
+                url = url.replace("mode=", "mode=debug");
+            }
         }
         mWebView.setWebViewClient(new WebViewClient() {
             public void onPageFinished(WebView view, String url) {
                 view.loadUrl("javascript: Tracker.webview.fromTracker = function(event) {Android.fromTracker(event);};");
             }
         });
-// todo
+
+// https://developer.android.com/develop/ui/views/layout/webapps/webview#UsingJavaScript
     mWebView.addJavascriptInterface(new FromTracker(this), "Android");
 
         mWebView.loadUrl(url);
@@ -119,8 +119,8 @@ public class TrackerActivity extends AppCompatActivity {
         /** get from WebPage */
         @JavascriptInterface
         public void fromTracker(String msg) {
+// todo error event
             Log.d("From tracker", msg);
-// ...do something
         }
     }
     @Override
