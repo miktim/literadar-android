@@ -17,8 +17,8 @@ import java.util.TimerTask;
 public class LocationProvider {
 
     public interface Handler {
-        void onLocationChanged(Context context, Location location);
-        void onOutOfLocationService(Context context);
+        void onLocationChanged(Location location);
+        void onOutOfLocationService();
     }
     Context mContext;
     Handler mHandler;
@@ -75,7 +75,7 @@ public class LocationProvider {
             Log.d("LocationProvider",
                     format("%s %TT", mLocation.getProvider(),new Date(mLastLocation.getTime())));
         }
-        mHandler.onLocationChanged(mContext, mLastLocation);
+        mHandler.onLocationChanged(mLastLocation);
         renewLocation();
     }
 

@@ -27,15 +27,13 @@ import org.miktim.udpsocket.UdpSocket;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
-import java.security.spec.InvalidKeySpecException;
+import java.security.GeneralSecurityException;
 
 public class TransponderService extends Service {
     static String ACTION_PACKET = "org.literadar.packet";
     static String ACTION_PACKET_EXTRA = "json";
     Settings mSettings = sSettings;
+    Context mContext = this;
     boolean mDoneService = false;
 
     Packet mIncomingPacket = new Packet();
@@ -43,19 +41,19 @@ public class TransponderService extends Service {
     LocationProvider mLocationProvider;
     LocationProvider.Handler mLocationHandler = new LocationProvider.Handler() {
         @Override
-        public void onLocationChanged(Context context, Location location) {
+        public void onLocationChanged(Location location) {
             if(location == null) return;
             mOutgoingPacket.updateLocation(
                     location.getTime(),
-                    mSettings.locations.timeout,
+                    mSettings.locations.timeout*2,
                     location.getLatitude(),
                     location.getLongitude(),
-                    (int)location.getAccuracy());
-            Intent intent = new Intent(ACTION_PACKET);
+                    (int) location.getAccuracy());
             try {
                 String json = mOutgoingPacket.toJSON();
+                Intent intent = new Intent(ACTION_PACKET);
                 intent.putExtra(ACTION_PACKET_EXTRA, json);
-                sendBroadcast(context, intent);
+                sendBroadcast(mContext, intent);
                 mUdpSocket.send(mOutgoingPacket.pack());
             } catch (IOException e) {
 // todo fatal
@@ -66,7 +64,7 @@ public class TransponderService extends Service {
         }
 
         @Override
-        public void onOutOfLocationService(Context context) {
+        public void onOutOfLocationService() {
 
         }
     };
@@ -78,6 +76,13 @@ public class TransponderService extends Service {
             if (action.equals(MainActivity.ACTION_EXIT)) {
                 mDoneService = true;
                 stopSelf();
+            } else if(action.equals(SettingsActivity.ACTION_RESTART)) {
+                if(mUdpSocket != null){
+                    mUdpSocket.close();
+                    mUdpSocket = null;
+                }
+//                mLocationProvider.disconnect();
+                restartService();
             }
         }
     };
@@ -92,12 +97,24 @@ public class TransponderService extends Service {
 
         @Override
         public void onPacket(UdpSocket udpSocket, DatagramPacket datagramPacket) {
-
+            try {
+                mIncomingPacket.unpack(datagramPacket.getData());
+// todo favorites
+                String json = mIncomingPacket.toJSON();
+                Intent intent = new Intent(ACTION_PACKET);
+                intent.putExtra(ACTION_PACKET_EXTRA, json);
+                sendBroadcast(mContext, intent);
+            } catch (IOException e) {
+// todo exception handling
+                e.printStackTrace();
+            } catch (GeneralSecurityException e) {
+                e.printStackTrace();
+            }
         }
 
         @Override
         public void onError(UdpSocket udpSocket, Exception e) {
-
+// todo
         }
 
         @Override
@@ -108,11 +125,9 @@ public class TransponderService extends Service {
 
     public TransponderService() {
         try {
-// todo getDisplayName, getIconId
-            mOutgoingPacket = new Packet(mSettings.getKeyPair(), mSettings.displayName);
-            mOutgoingPacket.iconId = 4;
+            mOutgoingPacket = new Packet(mSettings.getKeyPair(), mSettings.getDisplayName(), mSettings.getIconId());
         } catch (java.security.GeneralSecurityException e) {
-// todo fatal popup
+            MainActivity.self.fatalDialog(this, e);
             e.printStackTrace();
         }
     }
@@ -136,7 +151,7 @@ public class TransponderService extends Service {
         intentFilter.addAction(MainActivity.ACTION_EXIT);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
         mLocationProvider = new LocationProvider(this,mLocationHandler);
-        mLocationProvider.connect(mSettings.locations.timeout*1000, mSettings.locations.minDistance);
+        mLocationProvider.connect(mSettings.locations.getTime()*1000, mSettings.locations.getDistance());
     }
 
     String resString(int resString) {
@@ -145,22 +160,22 @@ public class TransponderService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        startService();
+        mNotifier.startForeground(resString(R.string.on_air));
+        restartService();
         return super.onStartCommand(intent, flags, startId);
     }
 
-    public void startService() {
-        mNotifier.startForeground(resString(R.string.on_air));
-
-// todo
-//        if(settings.mode != Settings.MODE_TRACKER_ONLY) {
-        try {
-            InetSocketAddress sa = (InetSocketAddress) mSettings.network.getRemoteSocket(mSettings.mode);
-            mUdpSocket = new UdpSocket(sa.getPort(), sa.getAddress(), mSettings.network.getLocalSocket());
-            mUdpSocket.receive(mUdpSocketHandler);
-        } catch (IOException e) {
-            e.printStackTrace();
-            stopSelf();
+    public void restartService() {
+        if(mSettings.getMode() != Settings.MODE_TRACKER_ONLY) {
+            try {
+                InetSocketAddress sa = (InetSocketAddress) mSettings.network.getRemoteSocket(mSettings.mode);
+                mUdpSocket = new UdpSocket(sa.getPort(), sa.getAddress(), mSettings.network.getLocalSocket());
+                if(mSettings.getMode() == Settings.MODE_MULTICAST_MEMBER)
+                    mUdpSocket.receive(mUdpSocketHandler);
+            } catch (IOException e) {
+                e.printStackTrace();
+                stopSelf();
+            }
         }
     }
 

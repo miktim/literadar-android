@@ -168,7 +168,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
 // accessed over MainActivity.self
-    void fatalDialog(Context context, Exception e) {
+    public void fatalDialog(Context context, Exception e) {
         showDialog(context,
                 "FATAL: " + e.toString(),
                 e.getMessage(),
