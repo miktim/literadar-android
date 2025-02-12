@@ -21,7 +21,6 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 
-//import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
@@ -29,9 +28,8 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class TrackerActivity extends AppCompatActivity {
-    //    private FrameLayout mWebContainer;
+
     private WebView mWebView;
-//    private boolean done = false;
 
     LocalBroadcastManager mLocalBroadcastManager;
 
@@ -70,10 +68,6 @@ public class TrackerActivity extends AppCompatActivity {
             return insets;
         });
 
-        // https://stackoverflow.com/questions/5329662/android-webview-geolocation
-//        mWebContainer = findViewById(R.id.webContainer);
-//        mWebView = new WebView(getApplicationContext());
-//        mWebContainer.addView(mWebView);
         mWebView = findViewById(R.id.webView);
 
         mWebView.getSettings().setAllowFileAccess(false);
@@ -85,13 +79,14 @@ public class TrackerActivity extends AppCompatActivity {
                 callback.invoke(origin, true, false);
             }
         });
-        String url = MainActivity.sSettings.trackerUrl;
+        String url = getIntent().getStringExtra("url"); //MainActivity.sSettings.trackerUrl;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) { // Android 4.4
             WebView.setWebContentsDebuggingEnabled(true);
             if (BuildConfig.DEBUG) {
                 url = url.replace("mode=", "mode=debug");
             }
         }
+
         mWebView.setWebViewClient(new WebViewClient() {
             public void onPageFinished(WebView view, String url) {
                 view.loadUrl("javascript: Tracker.webview.fromTracker = function(event) {Android.fromTracker(event);};");
@@ -103,6 +98,8 @@ public class TrackerActivity extends AppCompatActivity {
 
         mWebView.loadUrl(url);
     }
+
+
 
     String resString(int resString) {
         return (getResources().getString(resString));

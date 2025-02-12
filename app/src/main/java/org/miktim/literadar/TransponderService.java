@@ -7,8 +7,6 @@
 
 package org.miktim.literadar;
 
-import static org.miktim.literadar.MainActivity.sSettings;
-
 import static java.lang.String.format;
 
 import android.app.Service;
@@ -32,9 +30,8 @@ import java.security.GeneralSecurityException;
 public class TransponderService extends Service {
     static String ACTION_PACKET = "org.literadar.packet";
     static String ACTION_PACKET_EXTRA = "json";
-    Settings mSettings = sSettings;
+    Settings mSettings;
     Context mContext = this;
-    boolean mDoneService = false;
 
     Packet mIncomingPacket = new Packet();
     Packet mOutgoingPacket;
@@ -42,23 +39,22 @@ public class TransponderService extends Service {
     LocationProvider.Handler mLocationHandler = new LocationProvider.Handler() {
         @Override
         public void onLocationChanged(Location location) {
-            if(location == null) return;
+            if (location == null) return;
             mOutgoingPacket.updateLocation(
                     location.getTime(),
-                    mSettings.locations.timeout*2,
+//                    System.currentTimeMillis(),
+                    mSettings.locations.timeout * 2,
                     location.getLatitude(),
                     location.getLongitude(),
                     (int) location.getAccuracy());
             try {
-                String json = mOutgoingPacket.toJSON();
-                Intent intent = new Intent(ACTION_PACKET);
-                intent.putExtra(ACTION_PACKET_EXTRA, json);
-                sendBroadcast(mContext, intent);
-                mUdpSocket.send(mOutgoingPacket.pack());
-            } catch (IOException e) {
-// todo fatal
-                e.printStackTrace();
+                packetToTracker(mOutgoingPacket);
+                if (mUdpSocket != null && mSettings.getMode() != Settings.MODE_TRACKER_ONLY)
+                    mUdpSocket.send(mOutgoingPacket.pack());
             } catch (java.security.GeneralSecurityException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+// todo
                 e.printStackTrace();
             }
         }
@@ -74,14 +70,13 @@ public class TransponderService extends Service {
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (action.equals(MainActivity.ACTION_EXIT)) {
-                mDoneService = true;
                 stopSelf();
-            } else if(action.equals(SettingsActivity.ACTION_RESTART)) {
-                if(mUdpSocket != null){
+            } else if (action.equals(SettingsActivity.ACTION_RESTART)) {
+                mLocationProvider.disconnect();
+                if (mUdpSocket != null) {
                     mUdpSocket.close();
-                    mUdpSocket = null;
+//                    mUdpSocket = null;
                 }
-//                mLocationProvider.disconnect();
                 restartService();
             }
         }
@@ -100,10 +95,7 @@ public class TransponderService extends Service {
             try {
                 mIncomingPacket.unpack(datagramPacket.getData());
 // todo favorites
-                String json = mIncomingPacket.toJSON();
-                Intent intent = new Intent(ACTION_PACKET);
-                intent.putExtra(ACTION_PACKET_EXTRA, json);
-                sendBroadcast(mContext, intent);
+                packetToTracker(mIncomingPacket);
             } catch (IOException e) {
 // todo exception handling
                 e.printStackTrace();
@@ -123,13 +115,16 @@ public class TransponderService extends Service {
         }
     };
 
-    public TransponderService() {
-        try {
-            mOutgoingPacket = new Packet(mSettings.getKeyPair(), mSettings.getDisplayName(), mSettings.getIconId());
-        } catch (java.security.GeneralSecurityException e) {
-            MainActivity.self.fatalDialog(this, e);
-            e.printStackTrace();
+    void packetToTracker(Packet packet) throws IOException {
+        if (mSettings.showTracker) {
+            String json = packet.toJSON();
+            Intent intent = new Intent(ACTION_PACKET);
+            intent.putExtra(ACTION_PACKET_EXTRA, json);
+            sendBroadcast(mContext, intent);
         }
+    }
+
+    public TransponderService() {
     }
 
     @Override
@@ -139,19 +134,28 @@ public class TransponderService extends Service {
 
     @Override
     public void onCreate() {
-        mNotifier = new Notifier(this, R.drawable.ic_stat_service, format("%s:%s",
-                resString(R.string.app_name),
-                getResources().getStringArray(R.array.mode_array)[mSettings.getMode()]));
+        mSettings = MainActivity.sSettings;
+
+        mNotifier = new Notifier(this,
+                R.drawable.ic_stat_service,
+                notificationTitle() );
         mNotifier.setActivity(MainActivity.sSettingsIntent);
         mNotifier.setPriority(Notifier.PRIORITY_MAX);
 
         MainActivity.sService = this;
+
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(MainActivity.ACTION_EXIT);
+        intentFilter.addAction(SettingsActivity.ACTION_RESTART);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
-        mLocationProvider = new LocationProvider(this,mLocationHandler);
-        mLocationProvider.connect(mSettings.locations.getTime()*1000, mSettings.locations.getDistance());
+
+        mLocationProvider = new LocationProvider(this, mLocationHandler);
+    }
+    String notificationTitle() {
+        return  format("%s: %s",
+                resString(R.string.app_name),
+                getResources().getStringArray(R.array.mode_array)[mSettings.getMode()]);
     }
 
     String resString(int resString) {
@@ -166,17 +170,26 @@ public class TransponderService extends Service {
     }
 
     public void restartService() {
-        if(mSettings.getMode() != Settings.MODE_TRACKER_ONLY) {
+        try {
+            mOutgoingPacket = new Packet(mSettings.getKeyPair(), mSettings.getDisplayName(), mSettings.getIconId());
+        } catch (java.security.GeneralSecurityException e) {
+            MainActivity.self.fatalDialog(mContext, e);
+            e.printStackTrace();
+        }
+        if (mSettings.getMode() != Settings.MODE_TRACKER_ONLY) {
             try {
                 InetSocketAddress sa = (InetSocketAddress) mSettings.network.getRemoteSocket(mSettings.mode);
                 mUdpSocket = new UdpSocket(sa.getPort(), sa.getAddress(), mSettings.network.getLocalSocket());
-                if(mSettings.getMode() == Settings.MODE_MULTICAST_MEMBER)
+                if (mSettings.getMode() == Settings.MODE_MULTICAST_MEMBER)
                     mUdpSocket.receive(mUdpSocketHandler);
             } catch (IOException e) {
                 e.printStackTrace();
                 stopSelf();
             }
         }
+        // todo: too small minTime = 5 sec
+        mLocationProvider.connect(mSettings.locations.getTimeout() * 1000 * 2, mSettings.locations.getDistance());
+        mNotifier.notifyTitle(notificationTitle());
     }
 
     @Override

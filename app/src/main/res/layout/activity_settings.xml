@@ -106,7 +106,6 @@
 
             <EditText
                 android:id="@+id/addressEdt"
-                style="@android:style/Widget.DeviceDefault.EditText"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:enabled="true"

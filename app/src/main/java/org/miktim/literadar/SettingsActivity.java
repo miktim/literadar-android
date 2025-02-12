@@ -9,9 +9,7 @@ package org.miktim.literadar;
 import static org.miktim.literadar.Settings.MODE_UNICAST_CLIENT;
 import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
 
-import android.app.AlertDialog;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.View;
@@ -30,9 +28,7 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -47,6 +43,7 @@ public class SettingsActivity extends AppCompatActivity
     String[] mInterfaceArray;
     CheckBox mTrackerChk;
     EditText mAddressEdt;
+    Spinner mInterfaceSpn;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -57,6 +54,7 @@ public class SettingsActivity extends AppCompatActivity
         mSettings = MainActivity.sSettings;
         mTrackerChk = findViewById(R.id.trackerChk);
         mAddressEdt = findViewById(R.id.addressEdt);
+        mInterfaceSpn = findViewById(R.id.interfaceSpn);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
@@ -77,7 +75,7 @@ public class SettingsActivity extends AppCompatActivity
 
         String iName = mSettings.network.interfaceName;
         mInterfaceArray = getInterfaceList(iName);
-        initDropdownList(findViewById(R.id.interfaceSpn), mInterfaceArray,
+        initDropdownList(mInterfaceSpn, mInterfaceArray,
                 getListIndex(mInterfaceArray, iName));
         initDropdownList(findViewById(R.id.modeSpn), getResources().getStringArray(R.array.mode_array), mSettings.mode);
         modeDependedSettings(mSettings.mode); // sets address, tracker enabled
@@ -107,6 +105,7 @@ public class SettingsActivity extends AppCompatActivity
             case Settings.MODE_TRACKER_ONLY: {
                 mTrackerChk.setChecked(true);
                 mTrackerChk.setEnabled(false);
+                mInterfaceSpn.setEnabled(false);
                 mAddressEdt.setEnabled(false);
                 address = "";
                 break;
@@ -114,12 +113,14 @@ public class SettingsActivity extends AppCompatActivity
             case Settings.MODE_MULTICAST_MEMBER: {
                 mTrackerChk.setChecked(mSettings.getTrackerEnabled());
                 mTrackerChk.setEnabled(true);
+                mInterfaceSpn.setEnabled(true);
                 mAddressEdt.setEnabled(false);
                 break;
             }
             case Settings.MODE_UNICAST_CLIENT: {
                 mTrackerChk.setChecked(mSettings.getTrackerEnabled());
                 mTrackerChk.setEnabled(true);
+                mInterfaceSpn.setEnabled(true);
                 mAddressEdt.setEnabled(true);
                 break;
             }
@@ -183,6 +184,13 @@ public class SettingsActivity extends AppCompatActivity
         mSettings.setTrackerEnabled(mTrackerChk.isChecked());
     }
 
+    MainActivity.DialogAction mWrongAddress = new MainActivity.DialogAction() {
+        @Override
+        public void execute(int id) {
+            super.execute(id);
+        }
+    };
+
     boolean fillSettings() {
         String address = mAddressEdt.getText().toString();
         try {
@@ -193,7 +201,7 @@ public class SettingsActivity extends AppCompatActivity
             MainActivity.showDialog(this,
                     resString(R.string.err_wrong_address),
                     resString(R.string.required_address),
-                    "Ok");
+                    "Ok", mWrongAddress);
             mAddressEdt.requestFocus();
             return false;
         }
@@ -204,14 +212,9 @@ public class SettingsActivity extends AppCompatActivity
         File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
         try (FileOutputStream fos = new FileOutputStream(file)) {
             mSettings.save(fos);
-            MainActivity.sSettings = mSettings;
+//            MainActivity.sSettings = mSettings;
         } catch (Exception e) {
-            MainActivity.showDialog(this,
-                    resString(R.string.err_io),
-                    e.getLocalizedMessage(),
-                    resString(R.string.exitLbl));
-            e.printStackTrace();
-            exitLiteRadar();
+            MainActivity.self.fatalDialog(this, e);
         }
     }
 

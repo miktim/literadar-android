@@ -20,10 +20,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.drawable.ColorDrawable;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.Window;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -35,13 +33,14 @@ import java.io.File;
 import java.io.FileInputStream;
 
 public class MainActivity extends AppCompatActivity {
-    static String ACTION_CLOSE = "org.literadar.close";
+    static final String ACTION_CLOSE = "org.literadar.close";
     static final String ACTION_EXIT = "org.literadar.exit";
+//    static final String ACTION_FATAL = "org.literadar.fatal";
     static MainActivity self;
     static Settings sSettings;
     static TransponderService sService;//?
     static TrackerActivity sTracker;
-    static int FINE_LOCATION_GRANTED = 256;
+    static final int FINE_LOCATION_GRANTED = 256;
     static Intent sTrackerIntent;
     static Intent sSettingsIntent;
 
@@ -51,8 +50,10 @@ public class MainActivity extends AppCompatActivity {
             String action = intent.getAction();
             if (action.equals(ACTION_EXIT)) {
                 finish();
-            } else if (action.equals(SettingsActivity.ACTION_RESTART)){
+            } else if (action.equals(SettingsActivity.ACTION_RESTART)) {
                 startTrackerActivity();
+//            } else if (action.equals(ACTION_FATAL)) {
+//                fatalDialog(intent.getStringExtra("title"),intent.getStringExtra("message"));
             }
         }
     };
@@ -61,74 +62,81 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-// hide main activity
         setContentView(R.layout.activity_main);
+// hide main activity
 //        this.getTheme().applyStyle(R.style.AppTheme_Invisible, true);
 //        ActivityCompat.recreate(this);
 
         self = this;
+
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ACTION_EXIT);
         intentFilter.addAction(SettingsActivity.ACTION_RESTART);
+//        intentFilter.addAction(ACTION_FATAL);
+
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
 
         sTrackerIntent = new Intent(this, TrackerActivity.class);
 // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_NEW_TASK
         sTrackerIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
         sSettingsIntent = new Intent(this, SettingsActivity.class);
         sSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 //
-        checkPermission(Manifest.permission.ACCESS_FINE_LOCATION,FINE_LOCATION_GRANTED);
+        checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, FINE_LOCATION_GRANTED);
     }
+
     @Override
-    public void finish () {
+    public void finish() {
         closeTrackerActivity();
         mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
         super.finish();
     }
+
     @Override
-    protected void onDestroy () {
+    protected void onDestroy() {
         super.onDestroy();
         exit(0);
     }
 
     void permissionsGranted() {
-        if(sSettings == null) {
+        if (sSettings == null) {
             try {
                 sSettings = new Settings();
-                loadSettings(this);
+                if(loadSettings(this)) {
 // todo map not showing samsung
-                startTrackerActivity();
-                startActivity(sSettingsIntent);
-                startService(new Intent(this, TransponderService.class));
+                    startTrackerActivity();
+                    startActivity(sSettingsIntent);
+                    startService(new Intent(this, TransponderService.class));
+                }
             } catch (Exception e) {
-                e.printStackTrace();
+                fatalDialog(self, e);
             }
         }
     }
 
     void startTrackerActivity() {
-        if(sSettings.showTracker && sTracker == null)
+        if (sSettings.showTracker && sTracker == null) {
+            sTrackerIntent.putExtra("url", sSettings.getTrackerURL());
             startActivity(sTrackerIntent);
-        else if(!sSettings.showTracker)
+        } else if (!sSettings.showTracker)
             closeTrackerActivity();
     }
-    void closeTrackerActivity(){
+
+    void closeTrackerActivity() {
         sendBroadcast(this, new Intent(ACTION_CLOSE));
     }
 
-    public void checkPermission(String permission, int requestCode)
-    {
+    public void checkPermission(String permission, int requestCode) {
         // Checking if permission is not granted
         if (ContextCompat.checkSelfPermission(MainActivity.this, permission) == PERMISSION_DENIED) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                ActivityCompat.requestPermissions(MainActivity.this, new String[] { permission }, requestCode);
+                ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode);
             } else {
                 finish();
             }
-        }
-        else {
+        } else {
             permissionsGranted();
         }
     }
@@ -137,22 +145,37 @@ public class MainActivity extends AppCompatActivity {
     public void onRequestPermissionsResult(
             int requestCode,
             @NonNull String[] permissions,
-            @NonNull int[] grantResults)
-    {
+            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == FINE_LOCATION_GRANTED && grantResults[0] != PERMISSION_DENIED){
+        if (requestCode == FINE_LOCATION_GRANTED && grantResults[0] != PERMISSION_DENIED) {
             permissionsGranted();
-        }    else {
+        } else {
             finish();
         }
     }
 
-    static void showDialog(Context context, String title, String message, String okText) {
+    public static abstract class DialogAction {
+        DialogAction() {
+        }
+
+        public void execute(int id) {
+        }
+    }
+
+    DialogAction mFatalAction = new DialogAction() {
+        @Override
+        public void execute(int i) {
+            sendBroadcast(self, new Intent(ACTION_EXIT));
+            finish();
+        }
+    };
+
+    static void showDialog(Context context, String title, String message, String okText, DialogAction okAction) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
 // Add the buttons.
         builder.setPositiveButton(okText, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
-                // User taps OK button.
+                okAction.execute(id);
             }
         });
 /*
@@ -167,30 +190,26 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-// accessed over MainActivity.self
+    // accessed over MainActivity.self
     public void fatalDialog(Context context, Exception e) {
-        showDialog(context,
+        showDialog(self,
                 "FATAL: " + e.toString(),
                 e.getMessage(),
-               "Exit LiteRadar" );
-        sendBroadcast(this,new Intent(ACTION_EXIT));
-        finish();
+                "Exit LiteRadar", mFatalAction);
     }
 
-    void loadSettings(Context context) {
+    boolean loadSettings(Context context) {
         File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
-        try (FileInputStream fis = new FileInputStream(file)) {
-            if (file.exists()) {
+        if (file.exists()) {
+            try (FileInputStream fis = new FileInputStream(file)) {
                 sSettings.load(fis);
+            } catch (Exception e) {
+                fatalDialog(self, e);
+                e.printStackTrace();
+                return false;
             }
-        } catch (Exception e) {
-            MainActivity.showDialog(this,
-                    resString(R.string.err_io),
-                    e.getLocalizedMessage(),
-                    resString(R.string.exitLbl));
-            e.printStackTrace();
-            finish();
         }
+        return true;
     }
 
     String resString(int resId) {

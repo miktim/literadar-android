@@ -2,6 +2,7 @@ package org.miktim.literadar;
 
 import static java.lang.String.format;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.location.Location;
 import android.location.LocationListener;
@@ -24,9 +25,10 @@ public class LocationProvider {
     Handler mHandler;
     LocationManager mLocationManager;
     List<ProviderListener> mListeners = new ArrayList<>();
+    int mEnabledProviders = 0;
 
-    private long mMinTime; // milliseconds
-    private float mMinDistance; // meters
+//    private long mMinTime; // milliseconds
+//    private float mMinDistance; // meters
     private Location mLastLocation = null;
     private Location mLocation = new Location("");
     long mLastTime = 0;
@@ -40,6 +42,8 @@ public class LocationProvider {
         for(String providerName : names) {
             if(providerName.equals(LocationManager.PASSIVE_PROVIDER)) continue;
             mListeners.add(new ProviderListener(context, providerName));
+            if(mLocationManager.isProviderEnabled(providerName))
+                mEnabledProviders++;
         }
     }
     void renewLocation(){
@@ -48,17 +52,18 @@ public class LocationProvider {
         mLastTime = System.currentTimeMillis();
     }
 
+    @SuppressLint("MissingPermission")
     public void connect (long minTime, float minDistance) {
-        mMinDistance = minDistance;
-        mMinTime = minTime;
+//        mMinDistance = minDistance;
+//        mMinTime = minTime;
         disconnect();
         for (ProviderListener listener : mListeners) {
-            listener.connectListener(minTime, 0);// todo minDistance);
+            listener.connectListener(minTime, minDistance);// todo minDistance);
         }
         renewLocation();
         mTimer = new Timer();
         TimerTask timerTask = new TimerTask() {public void run() { updateLocation(); }};
-        mTimer.scheduleAtFixedRate(timerTask, mMinTime, mMinTime);
+        mTimer.scheduleAtFixedRate(timerTask, minTime, minTime);
     }
 
     public void disconnect() {
@@ -74,6 +79,8 @@ public class LocationProvider {
             mLastLocation = mLocation;
             Log.d("LocationProvider",
                     format("%s %TT", mLocation.getProvider(),new Date(mLastLocation.getTime())));
+        } else {
+
         }
         mHandler.onLocationChanged(mLastLocation);
         renewLocation();
@@ -105,12 +112,12 @@ public class LocationProvider {
         }
         @Override
         public void onProviderEnabled(String s) {
-
+            mEnabledProviders++;
         }
 
         @Override
         public void onProviderDisabled(String s) {
-
+            mEnabledProviders--;
         }
 
         boolean isEnabled() {
@@ -118,7 +125,7 @@ public class LocationProvider {
         }
         boolean isReachable() {
 // todo
-//            return mLocationManager.isReachable(providerName);
+//            return mLocationManager.isReachable(mProviderName);
             return true;
         }
 
@@ -134,6 +141,7 @@ public class LocationProvider {
         void disconnectListener() {
             if(isConnected()) {
                 mLocationManager.removeUpdates((LocationListener) this);
+//                this.disconnectListener();
                 mConnected = false;
             }
         }

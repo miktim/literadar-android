@@ -59,57 +59,111 @@ public class Notifier {
     public static final String CHANNEL_NAME = "NotifierChannel";
 
     private static int ZERO_ID = 0;
-    private int mNotificationId = ++ZERO_ID;
+    private final int mNotificationId = ++ZERO_ID;
 
     private static final int ALERT_BEEP_VOLUME = 30;
-    private Context mContext;
+    private final Context mContext;
     private String mChannelId;
-    private NotificationCompat.Builder mBuilder;
-    private NotificationManager mManager;
-    private Notification mNotification = null;
+    private String mTitle;
+    private String mText = "";
+    private final int mSmallIcon;
+    private PendingIntent mPendingIntent;
+    private int mPriority = 0;
+
+//    private NotificationCompat.Builder mBuilder;
+    private final NotificationManager mManager;
+//    private Notification mNotification = null;
 
     // https://developer.android.com/guide/topics/ui/notifiers/notifications.html#Required
     public Notifier(Context context, int smallIcon, String title) {
         mContext = context;
         mChannelId = CHANNEL_NAME + mNotificationId;
-        mBuilder = new NotificationCompat.Builder(context, mChannelId)
-                .setContentTitle(title);
-        if(smallIcon != 0) {
-            mBuilder.setSmallIcon(smallIcon);
-        }
+        mSmallIcon = smallIcon;
+        mTitle = title;
 
         mManager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
     }
+
+    NotificationCompat.Builder getBuilder() {
+        NotificationCompat.Builder builder =
+                (new NotificationCompat.Builder(mContext, mChannelId))
+                .setContentTitle(mTitle)
+                .setContentText(mText)
+                .setContentIntent(mPendingIntent).setOngoing(true)
+                .setPriority(PRIORITY[mPriority]);
+        if(mSmallIcon != 0) {
+            builder.setSmallIcon(mSmallIcon);
+        }
+// https://android-developers.googleblog.com/2018/12/effective-foreground-services-on-android_11.html
+// https://developer.android.com/training/notify-user/channels#CreateChannel
+// Create the NotificationChannel, but only on API 26+ (Android 8.0) because
+// the NotificationChannel class is new and not in the support library
+/*
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+// NOT TESTED!!!
+            final int[] IMPORTANCE = new int[] {
+                    NotificationManager.IMPORTANCE_MIN,
+                    NotificationManager.IMPORTANCE_LOW,
+                    NotificationManager.IMPORTANCE_DEFAULT,
+                    NotificationManager.IMPORTANCE_MAX
+            };
+// "If you create a new channel with this same id, the deleted channel will be un-deleted
+// with all of the same settings it had before it was deleted."
+            if (mManager.getNotificationChannel(mChannelId) != null) {
+                mManager.deleteNotificationChannel(mChannelId);
+                mChannelId = CHANNEL_NAME + (++ZERO_ID);
+                builder.setChannelId(mChannelId); // ????
+            }
+
+            NotificationChannel channel = new NotificationChannel(
+                    mChannelId, CHANNEL_NAME, IMPORTANCE[mPriority]);
+//            channel.setDescription("Channel description");
+// Register the channel with the system; you can't change the importance
+// or other notification behaviors after this
+            mManager.createNotificationChannel(channel);
+        }
+*/
+        return builder;
+    }
+
     // https://developer.android.com/guide/topics/ui/notifiers/notifications#Actions
-    public PendingIntent setActivity(Class activity) {
-        Intent intent = new Intent(mContext, activity);
+    public PendingIntent setActivity(Class activityCls) {
+        Intent intent = new Intent(mContext, activityCls);
         return setActivity(intent);
     }
 
     public PendingIntent setActivity(Intent activityIntent) {
-        PendingIntent notifyPendingIntent =
+        mPendingIntent =
                 PendingIntent.getActivity(
                         mContext, 0, activityIntent, PendingIntent.FLAG_UPDATE_CURRENT+PendingIntent.FLAG_IMMUTABLE);
-        mBuilder.setContentIntent(notifyPendingIntent).setOngoing(true) ;
-        return notifyPendingIntent;
+        return mPendingIntent;
     }
-
 
 // https://developer.android.com/guide/topics/ui/notifiers/notifications.html#Updating
     public void notify(String text) {
-        mBuilder.setContentText(text);
-        mNotification = mBuilder.build();
+        mText = text;
+        show();
+    }
+
+    public void notifyTitle(String title) {
+        mTitle = title;
+        show();
+    }
+
+    Notification show() {
+        Notification notification = getBuilder().build();
         try {
-            mManager.notify(mNotificationId, mNotification);
+            mManager.notify(mNotificationId, notification);
         } catch (NullPointerException e) {
             e.printStackTrace();
         }
+        return notification;
     }
 
     public void startForeground(String text) {
-        notify(text);
+        mText = text;
         if(mContext instanceof Service) {
-            ((Service)mContext).startForeground(mNotificationId, mNotification);
+            ((Service)mContext).startForeground(mNotificationId, show());
         }
     }
 
@@ -131,20 +185,19 @@ public class Notifier {
 
     public String getChannelId() { return mChannelId; }
     public int getNotificationId() { return mNotificationId; }
-    public NotificationCompat.Builder getBuilder() { return mBuilder; }
+//    public NotificationCompat.Builder getBuilder() { return mBuilder; }
     public NotificationManager getManager() {
         return mManager;
     }
 
 // returns NULL or LAST SHOWN notification
-    public Notification getNotification() { return mNotification;  }
+//    public Notification getNotification() { return mNotification;  }
 
     public void clearActivity() {
-// (Activity).mContext.finish();
-        mBuilder.setContentIntent(null);
+        mPendingIntent = null;
+        show();
     }
 
-// https://android-developers.googleblog.com/2018/12/effective-foreground-services-on-android_11.html
     private static final int[] PRIORITY = new int[] {
             NotificationCompat.PRIORITY_MIN,
             NotificationCompat.PRIORITY_LOW,
@@ -153,32 +206,7 @@ public class Notifier {
     };
 
     public void setPriority(int notifierPriority) {
-        mBuilder.setPriority(PRIORITY[notifierPriority]);
-// https://developer.android.com/training/notify-user/channels#CreateChannel
-// Create the NotificationChannel, but only on API 26+ (Android 8.0) because
-// the NotificationChannel class is new and not in the support library
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-// NOT TESTED!!!
-           final int[] IMPORTANCE = new int[] {
-                    NotificationManager.IMPORTANCE_MIN,
-                    NotificationManager.IMPORTANCE_LOW,
-                    NotificationManager.IMPORTANCE_DEFAULT,
-                    NotificationManager.IMPORTANCE_MAX
-            };
-// "If you create a new channel with this same id, the deleted channel will be un-deleted
-// with all of the same settings it had before it was deleted."
-            if (mManager.getNotificationChannel(mChannelId) != null) {
-                mManager.deleteNotificationChannel(mChannelId);
-                mChannelId = CHANNEL_NAME + (++ZERO_ID);
-                mBuilder.setChannelId(mChannelId); // ????
-            }
-            NotificationChannel channel = new NotificationChannel(
-                    mChannelId, CHANNEL_NAME, IMPORTANCE[notifierPriority]);
-//            channel.setDescription("Channel description");
-// Register the channel with the system; you can't change the importance
-// or other notification behaviors after this
-            mManager.createNotificationChannel(channel);
-        }
+        mPriority = notifierPriority;
     }
 
     public static void beep() {
