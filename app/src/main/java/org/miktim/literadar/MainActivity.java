@@ -14,6 +14,7 @@ import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
 import static java.lang.System.exit;
 
 import android.Manifest;
+import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -22,20 +23,26 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.security.NoSuchAlgorithmException;
+import java.security.spec.InvalidKeySpecException;
+import java.text.ParseException;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
     static final String ACTION_CLOSE = "org.literadar.close";
     static final String ACTION_EXIT = "org.literadar.exit";
-//    static final String ACTION_FATAL = "org.literadar.fatal";
+    //    static final String ACTION_FATAL = "org.literadar.fatal";
     static MainActivity self;
     static Settings sSettings;
     static TransponderService sService;//?
@@ -43,6 +50,7 @@ public class MainActivity extends AppCompatActivity {
     static final int FINE_LOCATION_GRANTED = 256;
     static Intent sTrackerIntent;
     static Intent sSettingsIntent;
+//    LiteRadarApplication mApp;
 
     BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -62,19 +70,19 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+//        setContentView(R.layout.activity_main);
 // hide main activity
 //        this.getTheme().applyStyle(R.style.AppTheme_Invisible, true);
 //        ActivityCompat.recreate(this);
 
         self = this;
+//        mApp = new LiteRadarApplication();
 
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ACTION_EXIT);
         intentFilter.addAction(SettingsActivity.ACTION_RESTART);
 //        intentFilter.addAction(ACTION_FATAL);
-
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
 
         sTrackerIntent = new Intent(this, TrackerActivity.class);
@@ -84,14 +92,18 @@ public class MainActivity extends AppCompatActivity {
         sSettingsIntent = new Intent(this, SettingsActivity.class);
         sSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 //
-        checkPermission(Manifest.permission.ACCESS_FINE_LOCATION, FINE_LOCATION_GRANTED);
+        checkPermission(new String[]{
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.POST_NOTIFICATIONS
+        }, FINE_LOCATION_GRANTED);
+
     }
 
     @Override
     public void finish() {
+        super.finish();
         closeTrackerActivity();
         mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
-        super.finish();
     }
 
     @Override
@@ -104,14 +116,17 @@ public class MainActivity extends AppCompatActivity {
         if (sSettings == null) {
             try {
                 sSettings = new Settings();
-                if(loadSettings(this)) {
-// todo map not showing samsung
-                    startTrackerActivity();
-                    startActivity(sSettingsIntent);
+                loadSettings(this);
+                // todo ???map not showing samsung
+                startTrackerActivity();
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(new Intent(this, TransponderService.class));
+                } else {
                     startService(new Intent(this, TransponderService.class));
                 }
+                startActivity(sSettingsIntent);
             } catch (Exception e) {
-                fatalDialog(self, e);
+                fatalDialog(e);
             }
         }
     }
@@ -128,11 +143,11 @@ public class MainActivity extends AppCompatActivity {
         sendBroadcast(this, new Intent(ACTION_CLOSE));
     }
 
-    public void checkPermission(String permission, int requestCode) {
+    public void checkPermission(String[] permissions, int requestCode) {
         // Checking if permission is not granted
-        if (ContextCompat.checkSelfPermission(MainActivity.this, permission) == PERMISSION_DENIED) {
+        if (!checkPermissions(permissions)) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.JELLY_BEAN) {
-                ActivityCompat.requestPermissions(MainActivity.this, new String[]{permission}, requestCode);
+                ActivityCompat.requestPermissions(MainActivity.this, permissions, requestCode);
             } else {
                 finish();
             }
@@ -141,11 +156,20 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    public boolean checkPermissions(String[] permissions) {
+        for (String permission : permissions) {
+            if (ContextCompat.checkSelfPermission(MainActivity.this, permission) == PERMISSION_DENIED) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     @Override
     public void onRequestPermissionsResult(
             int requestCode,
-            @NonNull String[] permissions,
-            @NonNull int[] grantResults) {
+            String[] permissions,
+            int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == FINE_LOCATION_GRANTED && grantResults[0] != PERMISSION_DENIED) {
             permissionsGranted();
@@ -154,32 +178,23 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public static abstract class DialogAction {
+    public static class DialogAction {
         DialogAction() {
         }
-
         public void execute(int id) {
         }
     }
 
-    DialogAction mFatalAction = new DialogAction() {
-        @Override
-        public void execute(int i) {
-            sendBroadcast(self, new Intent(ACTION_EXIT));
-            finish();
-        }
-    };
-
     static void showDialog(Context context, String title, String message, String okText, DialogAction okAction) {
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
 // Add the buttons.
-        builder.setPositiveButton(okText, new DialogInterface.OnClickListener() {
+        builder.setNegativeButton(okText, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 okAction.execute(id);
             }
         });
 /*
-        builder.setNegativeButton(R.string.cancelLbl, new DialogInterface.OnClickListener() {
+        builder.setPositiveButton(R.string.cancelLbl, new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int id) {
                 // User cancels the dialog.
             }
@@ -190,26 +205,54 @@ public class MainActivity extends AppCompatActivity {
         dialog.show();
     }
 
-    // accessed over MainActivity.self
-    public void fatalDialog(Context context, Exception e) {
+    static DialogAction mFatalAction = new DialogAction() {
+        @Override
+        public void execute(int i) {
+            sendBroadcast(self, new Intent(ACTION_EXIT));
+        }
+    };
+
+    public static void fatalDialog(Throwable t) {
         showDialog(self,
-                "FATAL: " + e.toString(),
-                e.getMessage(),
+                "FATAL: " + t.toString(),
+                t.getMessage(),
                 "Exit LiteRadar", mFatalAction);
     }
 
-    boolean loadSettings(Context context) {
+    static void showStackTrace(Throwable e) {
+        try(ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            Intent intent = self.getPackageManager().getLaunchIntentForPackage("org.miktim.literadar.stacktrace");
+            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // required when starting from Application
+            self.startActivity (intent);
+            e.getCause().printStackTrace(new PrintStream(bos));
+            String stackTrace = "LiteRadar crashed. Stack trace:\n\n"+bos.toString();
+/*
+            final Intent bIntent = new Intent("org.miktim.SEND_LOG");
+            bIntent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
+            bIntent.putExtra("stackTrace", stackTrace);
+//                    intent.setComponent(new ComponentName("org.miktim.literadar.StackTrace", "org.miktim.literadar.StackTrace.MainActivity"));
+            self.sendBroadcast(bIntent);
+            self.sendBroadcast(new Intent(ACTION_EXIT));
+//            sService.stopSelf();
+            self.finish();
+            System.exit(1);
+*/
+            self.getTheme().applyStyle(R.style.AppTheme_NoActionBar, true);
+            ActivityCompat.recreate(self);
+            ((TextView) self.findViewById(R.id.stackTraceTx)).setText(stackTrace);
+//            sService.stopSelf();
+        } catch (IOException ioException) {
+            System.exit(2);
+        }
+    }
+
+    void loadSettings(Context context) throws IOException, InvalidKeySpecException, NoSuchAlgorithmException, ParseException {
         File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
         if (file.exists()) {
             try (FileInputStream fis = new FileInputStream(file)) {
                 sSettings.load(fis);
-            } catch (Exception e) {
-                fatalDialog(self, e);
-                e.printStackTrace();
-                return false;
             }
         }
-        return true;
     }
 
     String resString(int resId) {
@@ -220,4 +263,7 @@ public class MainActivity extends AppCompatActivity {
         LocalBroadcastManager.getInstance(context).sendBroadcast(intent);
     }
 
+    public void exitBtnClicked(View v) {
+        finish();
+    }
 }

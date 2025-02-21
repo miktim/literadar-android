@@ -2,6 +2,7 @@
     <string name="app_name">LiteRadar</string>
     <string name="keyLbl">Signature key: RSA 512 bit</string>
     <string name="key_dateLbl">Created: </string>
+    <string name="aliasLbl">Alias: </string>
     <string name="all_interfaces">All available</string>
     <string name="int_unavailable">/unavailable</string>
     <string name="mode_selectLbl">Select mode:</string>
@@ -10,9 +11,9 @@
         <item>UDP Group member</item>
         <item>UDP Client</item>
     </string-array>
-    <string name="map_showLbl">show map</string>
+    <string name="tracker_showLbl">show tracker</string>
     <string name="int_selectLbl">Select interface:</string>
-    <string name="addressLbl">Server address:</string>
+    <string name="addressLbl">Remote address:</string>
     <string name="exitLbl">Exit LiteRadar</string>
     <string name="cancelLbl">Cancel</string>
     <string name="restartLbl">Save &amp; Restart</string>

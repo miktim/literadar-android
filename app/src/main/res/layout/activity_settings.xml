@@ -22,7 +22,7 @@
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:paddingBottom="5sp"
-                android:textSize="20sp"
+                android:textSize="15sp"
                 android:visibility="visible" />
 
             <Button
@@ -82,7 +82,7 @@
                 android:layout_height="wrap_content"
                 android:checked="true"
                 android:onClick="trackerChkClicked"
-                android:text="@string/map_showLbl"
+                android:text="@string/tracker_showLbl"
                 android:visibility="visible" />
 
             <TextView
@@ -109,6 +109,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:enabled="true"
+                android:textAllCaps="false"
                 android:inputType="textUri"
                 android:textSize="15sp" />
 

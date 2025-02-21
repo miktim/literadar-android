@@ -19,7 +19,6 @@ import android.os.IBinder;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import org.miktim.Notifier;
 import org.miktim.udpsocket.UdpSocket;
 
 import java.io.IOException;
@@ -166,14 +165,14 @@ public class TransponderService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         mNotifier.startForeground(resString(R.string.on_air));
         restartService();
-        return super.onStartCommand(intent, flags, startId);
+        return START_STICKY;//super.onStartCommand(intent, flags, startId);
     }
 
     public void restartService() {
         try {
             mOutgoingPacket = new Packet(mSettings.getKeyPair(), mSettings.getDisplayName(), mSettings.getIconId());
         } catch (java.security.GeneralSecurityException e) {
-            MainActivity.self.fatalDialog(mContext, e);
+            MainActivity.fatalDialog(e);
             e.printStackTrace();
         }
         if (mSettings.getMode() != Settings.MODE_TRACKER_ONLY) {
@@ -195,6 +194,7 @@ public class TransponderService extends Service {
     @Override
     public void onDestroy() {
         MainActivity.sService = null;
+        super.onDestroy();
         if (mUdpSocket != null) {
             mUdpSocket.close();
             mUdpSocket = null;
@@ -202,7 +202,6 @@ public class TransponderService extends Service {
         if (mLocationProvider != null) mLocationProvider.disconnect();
         mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
         stopForeground(true);
-        super.onDestroy();
     }
 
     void sendBroadcast(Context context, Intent intent) {

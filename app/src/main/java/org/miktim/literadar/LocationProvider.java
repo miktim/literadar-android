@@ -1,3 +1,10 @@
+/*
+ * LiteRadar LocationProvider, MIT (c) 2021-2025 miktim@mail.ru
+ * Thanks to:
+ *   developer.android.com
+ *   stackoverflow.com
+ */
+
 package org.miktim.literadar;
 
 import static java.lang.String.format;
@@ -21,6 +28,7 @@ public class LocationProvider {
         void onLocationChanged(Location location);
         void onOutOfLocationService();
     }
+
     Context mContext;
     Handler mHandler;
     LocationManager mLocationManager;
@@ -54,8 +62,7 @@ public class LocationProvider {
 
     @SuppressLint("MissingPermission")
     public void connect (long minTime, float minDistance) {
-//        mMinDistance = minDistance;
-//        mMinTime = minTime;
+
         disconnect();
         for (ProviderListener listener : mListeners) {
             listener.connectListener(minTime, minDistance);// todo minDistance);
@@ -80,7 +87,7 @@ public class LocationProvider {
             Log.d("LocationProvider",
                     format("%s %TT", mLocation.getProvider(),new Date(mLastLocation.getTime())));
         } else {
-
+// todo
         }
         mHandler.onLocationChanged(mLastLocation);
         renewLocation();

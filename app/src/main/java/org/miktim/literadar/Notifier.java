@@ -33,8 +33,9 @@
  * License: MIT
  */
 
- package org.miktim;
+ package org.miktim.literadar;
 
+import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -44,6 +45,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
+import android.os.Build;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -63,12 +65,12 @@ public class Notifier {
 
     private static final int ALERT_BEEP_VOLUME = 30;
     private final Context mContext;
-    private String mChannelId;
+    private final String mChannelId;
     private String mTitle;
     private String mText = "";
     private final int mSmallIcon;
     private PendingIntent mPendingIntent;
-    private int mPriority = 0;
+    private int mPriority = PRIORITY_DEFAULT;
 
 //    private NotificationCompat.Builder mBuilder;
     private final NotificationManager mManager;
@@ -85,6 +87,8 @@ public class Notifier {
     }
 
     NotificationCompat.Builder getBuilder() {
+        prepareChannel(mContext, mChannelId, mPriority);
+
         NotificationCompat.Builder builder =
                 (new NotificationCompat.Builder(mContext, mChannelId))
                 .setContentTitle(mTitle)
@@ -94,36 +98,43 @@ public class Notifier {
         if(mSmallIcon != 0) {
             builder.setSmallIcon(mSmallIcon);
         }
-// https://android-developers.googleblog.com/2018/12/effective-foreground-services-on-android_11.html
-// https://developer.android.com/training/notify-user/channels#CreateChannel
-// Create the NotificationChannel, but only on API 26+ (Android 8.0) because
-// the NotificationChannel class is new and not in the support library
-/*
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-// NOT TESTED!!!
-            final int[] IMPORTANCE = new int[] {
-                    NotificationManager.IMPORTANCE_MIN,
-                    NotificationManager.IMPORTANCE_LOW,
-                    NotificationManager.IMPORTANCE_DEFAULT,
-                    NotificationManager.IMPORTANCE_MAX
-            };
-// "If you create a new channel with this same id, the deleted channel will be un-deleted
-// with all of the same settings it had before it was deleted."
-            if (mManager.getNotificationChannel(mChannelId) != null) {
-                mManager.deleteNotificationChannel(mChannelId);
-                mChannelId = CHANNEL_NAME + (++ZERO_ID);
-                builder.setChannelId(mChannelId); // ????
-            }
-
-            NotificationChannel channel = new NotificationChannel(
-                    mChannelId, CHANNEL_NAME, IMPORTANCE[mPriority]);
-//            channel.setDescription("Channel description");
-// Register the channel with the system; you can't change the importance
-// or other notification behaviors after this
-            mManager.createNotificationChannel(channel);
-        }
-*/
         return builder;
+    }
+/*
+    public NotificationCompat.Builder getNotificationBuilder(Context context, String channelId, int importance) {
+        NotificationCompat.Builder builder;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            prepareChannel(context, channelId, importance);
+            builder = new NotificationCompat.Builder(context, channelId);
+        } else {
+            builder = new NotificationCompat.Builder(context);
+        }
+        return builder;
+    }
+*/
+    NotificationChannel mChannel = null;
+    @TargetApi(26)
+    private void prepareChannel(Context context, String id, int priority) {
+        if (Build.VERSION.SDK_INT < 26) return; // 26+ Build.VERSION_CODES.O
+        final int[] IMPORTANCE = new int[] {
+                NotificationManager.IMPORTANCE_MIN,
+                NotificationManager.IMPORTANCE_LOW,
+                NotificationManager.IMPORTANCE_DEFAULT,
+                NotificationManager.IMPORTANCE_MAX
+        };
+        String appName = context.getString(R.string.app_name);
+        String description = appName + " notification channel";//context.getString(R.string.notifications_channel_description);
+
+ //       if(mManager != null) {
+ //           NotificationChannel nChannel = mManager.getNotificationChannel(id);
+
+            if (mChannel == null) {
+                mChannel = new NotificationChannel(id, appName, IMPORTANCE[priority]);
+                mChannel.setDescription(description);
+                mChannel.setLockscreenVisibility(Notification.VISIBILITY_PRIVATE);
+                mManager.createNotificationChannel(mChannel);
+            }
+//        }
     }
 
     // https://developer.android.com/guide/topics/ui/notifiers/notifications#Actions
@@ -133,9 +144,9 @@ public class Notifier {
     }
 
     public PendingIntent setActivity(Intent activityIntent) {
-        mPendingIntent =
-                PendingIntent.getActivity(
-                        mContext, 0, activityIntent, PendingIntent.FLAG_UPDATE_CURRENT+PendingIntent.FLAG_IMMUTABLE);
+        mPendingIntent = PendingIntent.getActivity(
+                mContext, 0, activityIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         return mPendingIntent;
     }
 

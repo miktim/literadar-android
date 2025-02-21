@@ -9,6 +9,7 @@ package org.miktim.literadar;
 import static org.miktim.literadar.Settings.MODE_UNICAST_CLIENT;
 import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
 
+import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -27,8 +28,11 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -36,7 +40,7 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Enumeration;
 
-public class SettingsActivity extends AppCompatActivity
+public class SettingsActivity extends AppActivity
         implements AdapterView.OnItemSelectedListener {
     Settings mSettings;
     static final String ACTION_RESTART = "org.literadar.restart";
@@ -48,27 +52,28 @@ public class SettingsActivity extends AppCompatActivity
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
+//        supportRequestWindowFeature(Window.FEATURE_NO_TITLE);
         setContentView(R.layout.activity_settings);
-
-        mSettings = MainActivity.sSettings;
-        mTrackerChk = findViewById(R.id.trackerChk);
-        mAddressEdt = findViewById(R.id.addressEdt);
-        mInterfaceSpn = findViewById(R.id.interfaceSpn);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+
+        mSettings = MainActivity.sSettings;
+        mTrackerChk = findViewById(R.id.trackerChk);
+        mAddressEdt = findViewById(R.id.addressEdt);
+        mInterfaceSpn = findViewById(R.id.interfaceSpn);
         fillLayout();
 
+        throw new NullPointerException();
     }
 
     void fillLayout() {
         ((TextView) findViewById(R.id.titleTxt)).setText(resString(R.string.app_name));
         ((TextView) findViewById(R.id.keyTxt)).setText(resString(R.string.keyLbl));
         ((TextView) findViewById(R.id.keyDateTxt))
-                .setText(String.format("%s%s",
+                .setText(String.format("%s %s",
                         resString(R.string.key_dateLbl),
                         new SimpleDateFormat("yyyy-MM-dd").
                                 format(mSettings.getKeyTimeStamp())));
@@ -162,6 +167,8 @@ public class SettingsActivity extends AppCompatActivity
         switch (parent.getId()) {
             case R.id.modeSpn: {
                 modeDependedSettings(position);
+                mSettings.mode = position;
+                if(position == Settings.MODE_TRACKER_ONLY) mSettings.showTracker = true;
                 break;
             }
             case R.id.interfaceSpn: {
@@ -214,7 +221,7 @@ public class SettingsActivity extends AppCompatActivity
             mSettings.save(fos);
 //            MainActivity.sSettings = mSettings;
         } catch (Exception e) {
-            MainActivity.self.fatalDialog(this, e);
+            MainActivity.self.fatalDialog(e);
         }
     }
 
