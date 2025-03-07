@@ -10,7 +10,7 @@ public class AppActivity extends Activity {
         Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(Thread thread, Throwable throwable) {
-                MainActivity.showStackTrace(throwable);
+                MainActivity.fatalDialog(throwable);
                 finish();
             }
         });

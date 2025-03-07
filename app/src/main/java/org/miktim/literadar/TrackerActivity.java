@@ -27,7 +27,7 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-public class TrackerActivity extends Activity {
+public class TrackerActivity extends AppActivity {
 
     private WebView mWebView;
 

@@ -14,7 +14,6 @@ import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
 import static java.lang.System.exit;
 
 import android.Manifest;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -24,25 +23,22 @@ import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Bundle;
 import android.view.View;
-import android.widget.TextView;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.PrintStream;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.text.ParseException;
 
-public class MainActivity extends Activity {
+public class MainActivity extends AppActivity {
     static final String ACTION_CLOSE = "org.literadar.close";
     static final String ACTION_EXIT = "org.literadar.exit";
-    //    static final String ACTION_FATAL = "org.literadar.fatal";
+
     static MainActivity self;
     static Settings sSettings;
     static TransponderService sService;//?
@@ -50,7 +46,6 @@ public class MainActivity extends Activity {
     static final int FINE_LOCATION_GRANTED = 256;
     static Intent sTrackerIntent;
     static Intent sSettingsIntent;
-//    LiteRadarApplication mApp;
 
     BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -60,8 +55,6 @@ public class MainActivity extends Activity {
                 finish();
             } else if (action.equals(SettingsActivity.ACTION_RESTART)) {
                 startTrackerActivity();
-//            } else if (action.equals(ACTION_FATAL)) {
-//                fatalDialog(intent.getStringExtra("title"),intent.getStringExtra("message"));
             }
         }
     };
@@ -76,13 +69,11 @@ public class MainActivity extends Activity {
 //        ActivityCompat.recreate(this);
 
         self = this;
-//        mApp = new LiteRadarApplication();
 
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ACTION_EXIT);
         intentFilter.addAction(SettingsActivity.ACTION_RESTART);
-//        intentFilter.addAction(ACTION_FATAL);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
 
         sTrackerIntent = new Intent(this, TrackerActivity.class);
@@ -205,7 +196,7 @@ public class MainActivity extends Activity {
         dialog.show();
     }
 
-    static DialogAction mFatalAction = new DialogAction() {
+    static DialogAction sFatalAction = new DialogAction() {
         @Override
         public void execute(int i) {
             sendBroadcast(self, new Intent(ACTION_EXIT));
@@ -216,34 +207,7 @@ public class MainActivity extends Activity {
         showDialog(self,
                 "FATAL: " + t.toString(),
                 t.getMessage(),
-                "Exit LiteRadar", mFatalAction);
-    }
-
-    static void showStackTrace(Throwable e) {
-        try(ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            Intent intent = self.getPackageManager().getLaunchIntentForPackage("org.miktim.literadar.stacktrace");
-            intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK); // required when starting from Application
-            self.startActivity (intent);
-            e.getCause().printStackTrace(new PrintStream(bos));
-            String stackTrace = "LiteRadar crashed. Stack trace:\n\n"+bos.toString();
-/*
-            final Intent bIntent = new Intent("org.miktim.SEND_LOG");
-            bIntent.addFlags(Intent.FLAG_INCLUDE_STOPPED_PACKAGES);
-            bIntent.putExtra("stackTrace", stackTrace);
-//                    intent.setComponent(new ComponentName("org.miktim.literadar.StackTrace", "org.miktim.literadar.StackTrace.MainActivity"));
-            self.sendBroadcast(bIntent);
-            self.sendBroadcast(new Intent(ACTION_EXIT));
-//            sService.stopSelf();
-            self.finish();
-            System.exit(1);
-*/
-            self.getTheme().applyStyle(R.style.AppTheme_NoActionBar, true);
-            ActivityCompat.recreate(self);
-            ((TextView) self.findViewById(R.id.stackTraceTx)).setText(stackTrace);
-//            sService.stopSelf();
-        } catch (IOException ioException) {
-            System.exit(2);
-        }
+                "Exit LiteRadar", sFatalAction);
     }
 
     void loadSettings(Context context) throws IOException, InvalidKeySpecException, NoSuchAlgorithmException, ParseException {

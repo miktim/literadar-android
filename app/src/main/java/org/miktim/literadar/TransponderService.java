@@ -27,7 +27,7 @@ import java.net.InetSocketAddress;
 import java.security.GeneralSecurityException;
 
 public class TransponderService extends Service {
-    static String ACTION_PACKET = "org.literadar.packet";
+    static String ACTION_PACKET = "org.literadar.tracker.ACTION";
     static String ACTION_PACKET_EXTRA = "json";
     Settings mSettings;
     Context mContext = this;

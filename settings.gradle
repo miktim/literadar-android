@@ -8,4 +8,3 @@ dependencyResolutionManagement {
 }
 rootProject.name = "LiteRadar"
 include ':app'
-include ':stacktrace'

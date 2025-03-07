@@ -9,12 +9,11 @@ package org.miktim.literadar;
 import static org.miktim.literadar.Settings.MODE_UNICAST_CLIENT;
 import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
-import android.view.Window;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
@@ -22,17 +21,13 @@ import android.widget.EditText;
 import android.widget.Spinner;
 import android.widget.TextView;
 
-import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.PrintStream;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
@@ -66,11 +61,15 @@ public class SettingsActivity extends AppActivity
         mInterfaceSpn = findViewById(R.id.interfaceSpn);
         fillLayout();
 
-        throw new NullPointerException();
+//        throw new NullPointerException();
     }
 
     void fillLayout() {
-        ((TextView) findViewById(R.id.titleTxt)).setText(resString(R.string.app_name));
+        String version = "";
+        try {
+            version = this.getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+        } catch (PackageManager.NameNotFoundException e) { }
+        ((TextView) findViewById(R.id.titleTxt)).setText(resString(R.string.app_name) + " " + version);
         ((TextView) findViewById(R.id.keyTxt)).setText(resString(R.string.keyLbl));
         ((TextView) findViewById(R.id.keyDateTxt))
                 .setText(String.format("%s %s",
@@ -78,6 +77,7 @@ public class SettingsActivity extends AppActivity
                         new SimpleDateFormat("yyyy-MM-dd").
                                 format(mSettings.getKeyTimeStamp())));
 
+        ((TextView) findViewById(R.id.nameEdt)).setText(mSettings.name);
         String iName = mSettings.network.interfaceName;
         mInterfaceArray = getInterfaceList(iName);
         initDropdownList(mInterfaceSpn, mInterfaceArray,
@@ -199,6 +199,8 @@ public class SettingsActivity extends AppActivity
     };
 
     boolean fillSettings() {
+        String name = ((TextView) findViewById(R.id.nameEdt)).getText().toString();
+        mSettings.name = name.substring(0, Math.min(name.length(), 16));
         String address = mAddressEdt.getText().toString();
         try {
             if (mSettings.getMode() == MODE_UNICAST_CLIENT)
