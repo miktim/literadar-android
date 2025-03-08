@@ -19,7 +19,10 @@
     <string name="restartLbl">Save &amp; Restart</string>
     <string name="err_wrong_address">Wrong or missed address!</string>
     <string name="required_address">Required: ip:port or reachable domain:port</string>
-    <string name="err_io">File io error. Exit.</string>
+    <string name="err_settings_title">Settings file error.</string>
+    <string name="err_settings_msg">Сontinue with the current settings.</string>
+    <string name="err_geolocation">Geolocation unavailable</string>
+    <string name="err_network">Network error</string>
     <string name="on_air">Tap here to show the LiteRadar</string>
 
 </resources>

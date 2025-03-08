@@ -31,6 +31,7 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.text.ParseException;
@@ -38,14 +39,18 @@ import java.text.ParseException;
 public class MainActivity extends AppActivity {
     static final String ACTION_CLOSE = "org.literadar.close";
     static final String ACTION_EXIT = "org.literadar.exit";
+    static Throwable sFatal = null;
 
-    static MainActivity self;
+//    static MainActivity self;
+    static Context sContext;
+
     static Settings sSettings;
     static TransponderService sService;//?
     static TrackerActivity sTracker;
     static final int FINE_LOCATION_GRANTED = 256;
     static Intent sTrackerIntent;
     static Intent sSettingsIntent;
+    static Intent sServiceIntent;
 
     BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
@@ -63,12 +68,13 @@ public class MainActivity extends AppActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-//        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_main);
 // hide main activity
 //        this.getTheme().applyStyle(R.style.AppTheme_Invisible, true);
 //        ActivityCompat.recreate(this);
 
-        self = this;
+//        self = this;
+        sContext = getApplicationContext();
 
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
@@ -83,6 +89,7 @@ public class MainActivity extends AppActivity {
         sSettingsIntent = new Intent(this, SettingsActivity.class);
         sSettingsIntent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 //
+        sServiceIntent = new Intent(this, TransponderService.class);
         checkPermission(new String[]{
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.POST_NOTIFICATIONS
@@ -106,19 +113,20 @@ public class MainActivity extends AppActivity {
     void permissionsGranted() {
         if (sSettings == null) {
             try {
-                sSettings = new Settings();
-                loadSettings(this);
-                // todo ???map not showing samsung
-                startTrackerActivity();
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                    startForegroundService(new Intent(this, TransponderService.class));
-                } else {
-                    startService(new Intent(this, TransponderService.class));
-                }
-                startActivity(sSettingsIntent);
-            } catch (Exception e) {
-                fatalDialog(e);
+                sSettings = loadSettings(getBaseContext());
+            } catch (Throwable t) {
+                finish();
+//                self.uncaughtException(Thread.currentThread(), t);
             }
+
+// todo ???map not showing samsung
+            startTrackerActivity();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(sServiceIntent);
+            } else {
+                 startService(sServiceIntent);
+            }
+            startActivity(sSettingsIntent);
         }
     }
 
@@ -196,27 +204,24 @@ public class MainActivity extends AppActivity {
         dialog.show();
     }
 
-    static DialogAction sFatalAction = new DialogAction() {
-        @Override
-        public void execute(int i) {
-            sendBroadcast(self, new Intent(ACTION_EXIT));
-        }
-    };
-
-    public static void fatalDialog(Throwable t) {
-        showDialog(self,
-                "FATAL: " + t.toString(),
-                t.getMessage(),
-                "Exit LiteRadar", sFatalAction);
+    public static void okDialog(String title, String msg) {
+        showDialog(sContext, title, msg, "Ok", new DialogAction());
     }
 
-    void loadSettings(Context context) throws IOException, InvalidKeySpecException, NoSuchAlgorithmException, ParseException {
+    Settings loadSettings(Context context) throws InvalidKeySpecException, NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+        Settings settings = new Settings();
         File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
         if (file.exists()) {
             try (FileInputStream fis = new FileInputStream(file)) {
-                sSettings.load(fis);
+                settings.load(fis);
+            } catch (IOException | ParseException e) {
+                MainActivity.okDialog(
+                        resString(R.string.err_settings_title),
+                        resString(R.string.err_settings_msg)
+                        );
             }
         }
+        return settings;
     }
 
     String resString(int resId) {

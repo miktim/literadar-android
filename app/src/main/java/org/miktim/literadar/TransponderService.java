@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 import java.security.GeneralSecurityException;
+import java.util.Arrays;
 
 public class TransponderService extends Service {
     static String ACTION_PACKET = "org.literadar.tracker.ACTION";
@@ -42,7 +43,7 @@ public class TransponderService extends Service {
             mOutgoingPacket.updateLocation(
                     location.getTime(),
 //                    System.currentTimeMillis(),
-                    mSettings.locations.timeout * 2,
+                    mSettings.locations.timeout * 2L,
                     location.getLatitude(),
                     location.getLongitude(),
                     (int) location.getAccuracy());
@@ -92,7 +93,7 @@ public class TransponderService extends Service {
         @Override
         public void onPacket(UdpSocket udpSocket, DatagramPacket datagramPacket) {
             try {
-                mIncomingPacket.unpack(datagramPacket.getData());
+                mIncomingPacket.unpack(Arrays.copyOf(datagramPacket.getData(), datagramPacket.getLength()));
 // todo favorites
                 packetToTracker(mIncomingPacket);
             } catch (IOException e) {
@@ -172,8 +173,8 @@ public class TransponderService extends Service {
         try {
             mOutgoingPacket = new Packet(mSettings.getKeyPair(), mSettings.getDisplayName(), mSettings.getIconId());
         } catch (java.security.GeneralSecurityException e) {
-            MainActivity.fatalDialog(e);
             e.printStackTrace();
+            stopSelf();
         }
         if (mSettings.getMode() != Settings.MODE_TRACKER_ONLY) {
             try {
@@ -187,14 +188,13 @@ public class TransponderService extends Service {
             }
         }
         // todo: too small minTime = 5 sec
-        mLocationProvider.connect(mSettings.locations.getTimeout() * 1000 * 2, mSettings.locations.getDistance());
+        mLocationProvider.connect(mSettings.locations.getTimeout() * 1000L, mSettings.locations.getDistance());
         mNotifier.notifyTitle(notificationTitle());
     }
 
     @Override
     public void onDestroy() {
         MainActivity.sService = null;
-        super.onDestroy();
         if (mUdpSocket != null) {
             mUdpSocket.close();
             mUdpSocket = null;
@@ -202,6 +202,7 @@ public class TransponderService extends Service {
         if (mLocationProvider != null) mLocationProvider.disconnect();
         mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
         stopForeground(true);
+        super.onDestroy();
     }
 
     void sendBroadcast(Context context, Intent intent) {

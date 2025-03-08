@@ -68,14 +68,13 @@ public class SettingsActivity extends AppActivity
         String version = "";
         try {
             version = this.getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-        } catch (PackageManager.NameNotFoundException e) { }
+        } catch (PackageManager.NameNotFoundException ignore) { }
         ((TextView) findViewById(R.id.titleTxt)).setText(resString(R.string.app_name) + " " + version);
         ((TextView) findViewById(R.id.keyTxt)).setText(resString(R.string.keyLbl));
         ((TextView) findViewById(R.id.keyDateTxt))
                 .setText(String.format("%s %s",
                         resString(R.string.key_dateLbl),
-                        new SimpleDateFormat("yyyy-MM-dd").
-                                format(mSettings.getKeyTimeStamp())));
+                        new SimpleDateFormat("yyyy-MM-dd").format(mSettings.getKeyTimeStamp())));
 
         ((TextView) findViewById(R.id.nameEdt)).setText(mSettings.name);
         String iName = mSettings.network.interfaceName;
@@ -223,7 +222,10 @@ public class SettingsActivity extends AppActivity
             mSettings.save(fos);
 //            MainActivity.sSettings = mSettings;
         } catch (Exception e) {
-            MainActivity.self.fatalDialog(e);
+            MainActivity.showDialog(this,
+                    resString(R.string.err_settings_title),
+                    resString(R.string.err_settings_msg),
+                    "Ok", new MainActivity.DialogAction());
         }
     }
 

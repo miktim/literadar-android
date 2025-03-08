@@ -35,8 +35,6 @@ public class LocationProvider {
     List<ProviderListener> mListeners = new ArrayList<>();
     int mEnabledProviders = 0;
 
-//    private long mMinTime; // milliseconds
-//    private float mMinDistance; // meters
     private Location mLastLocation = null;
     private Location mLocation = new Location("");
     long mLastTime = 0;
@@ -45,15 +43,8 @@ public class LocationProvider {
     public LocationProvider(Context context, Handler handler){
         mContext = context;
         mHandler = handler;
-        mLocationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
-        List<String> names = mLocationManager.getProviders(true);
-        for(String providerName : names) {
-            if(providerName.equals(LocationManager.PASSIVE_PROVIDER)) continue;
-            mListeners.add(new ProviderListener(context, providerName));
-            if(mLocationManager.isProviderEnabled(providerName))
-                mEnabledProviders++;
-        }
     }
+
     void renewLocation(){
         mLocation = new Location("");
         mLocation.setAccuracy(Float.MAX_VALUE);
@@ -64,6 +55,17 @@ public class LocationProvider {
     public void connect (long minTime, float minDistance) {
 
         disconnect();
+
+        mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+        List<String> names = mLocationManager.getProviders(true);
+        mEnabledProviders = 0;
+        for(String providerName : names) {
+            if(providerName.equals(LocationManager.PASSIVE_PROVIDER)) continue;
+            mListeners.add(new ProviderListener(providerName));
+            if(mLocationManager.isProviderEnabled(providerName))
+                mEnabledProviders++;
+        }
+
         for (ProviderListener listener : mListeners) {
             listener.connectListener(minTime, minDistance);// todo minDistance);
         }
@@ -74,22 +76,28 @@ public class LocationProvider {
     }
 
     public void disconnect() {
+        if (mLocationManager == null) return; // not connected
         for (ProviderListener listener : mListeners) {
             listener.disconnectListener();
         }
+        mLocationManager = null;
         if (mTimer != null)
             try { mTimer.cancel(); } catch (Exception ignore) {}
     }
 
     private void updateLocation() {
         if (!mLocation.getProvider().isEmpty()) {
-            mLastLocation = mLocation;
+            synchronized(mLocation) {
+                mLastLocation = mLocation;
+            }
             Log.d("LocationProvider",
-                    format("%s %TT", mLocation.getProvider(),new Date(mLastLocation.getTime())));
-        } else {
-// todo
+                    format("%s %TT", mLastLocation.getProvider(),new Date(mLastLocation.getTime())));
         }
-        mHandler.onLocationChanged(mLastLocation);
+        if (mEnabledProviders == 0) {
+            mHandler.onOutOfLocationService();
+        } else {
+            mHandler.onLocationChanged(mLastLocation);
+        }
         renewLocation();
     }
 
@@ -97,7 +105,7 @@ public class LocationProvider {
         String mProviderName;
         Boolean mConnected = false;
 
-        ProviderListener(Context context, String providerName){
+        ProviderListener(String providerName){
             this.mProviderName = providerName;
         }
 
@@ -130,11 +138,6 @@ public class LocationProvider {
         boolean isEnabled() {
             return mLocationManager.isProviderEnabled(mProviderName);
         }
-        boolean isReachable() {
-// todo
-//            return mLocationManager.isReachable(mProviderName);
-            return true;
-        }
 
         void connectListener(long minTime, float minDistance) {
             try {
@@ -147,57 +150,9 @@ public class LocationProvider {
 
         void disconnectListener() {
             if(isConnected()) {
-                mLocationManager.removeUpdates((LocationListener) this);
-//                this.disconnectListener();
+                mLocationManager.removeUpdates( this);
                 mConnected = false;
             }
         }
     }
-/*
-
-    private void setLastKnownLocation() throws SecurityException, NullPointerException {
-        Location location;
-        location = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        if (location != null && location.getTime() > mLocation.getTime()) {
-debug("GPS");
-            mLocation = location;
-        } else {
-            location = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-            if (location != null && location.getTime() > mLocation.getTime()) {
-debug("NETWORK: "+String.format("%tT",location.getTime()));
-                mLocation = location;
-            }
-        }
-
-        if (location == null) ((Listener) mContext).onOutOfLocationService();
-
-        float distanceToFence = mLocation.distanceTo(mGpsFence);
-        if (distanceToFence > RADIUS_GPS_OFF) {
-            mGpsFence = mLocation;
-            if (!mGpsOn) {
-debug("GPSOn distanceToFence: " + distanceToFence + " radius: " + RADIUS_GPS_OFF);
-                mGpsOn = true;
-                updateManager(mTime, mDistance);
-            }
-        } else if (mGpsOn
-                && (mLocation.getTime() - mGpsFence.getTime()) > DELAY_GPS_OFF
-                && mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
-debug("GPSOff distanceToFence: " + distanceToFence + " radius: " + RADIUS_GPS_OFF);
-            mGpsOn = false;
-            updateManager(mTime, mDistance);
-        }
-    }
-
-    public void delay(long millis) {
-        long endTime = System.currentTimeMillis() + millis;
-        while (System.currentTimeMillis() < endTime) {
-            synchronized (this) {
-                try {
-                    wait(endTime - System.currentTimeMillis());
-                } catch (Exception e) {
-                }
-            }
-        }
-    }
-*/
 }
