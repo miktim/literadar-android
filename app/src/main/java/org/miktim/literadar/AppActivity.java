@@ -17,21 +17,19 @@ public class AppActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+// Thread.defaultExceptionHandler.uncaughtException
         Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
             @Override
             public void uncaughtException(Thread thread, Throwable throwable) {
-                Context context = getBaseContext();
+                Context context = getApplicationContext();
+                MainActivity.fatal(context, throwable);
+/*
                 File file = new File(context.getFilesDir(), "fatal.log");
                 try (PrintStream ps = new PrintStream(file)) {
                     if(MainActivity.sFatal == null) {
                         MainActivity.sFatal = throwable;
                         throwable.printStackTrace(ps);
-/*
-                        MainActivity.okDialog(format("Fatal: %s",
-                                throwable.getCause().getClass().getSimpleName()),
-                                "See fatal.log"
-                                );
-*/
+
                         Toast.makeText(context,
                                 format("Fatal: %s",
                                         throwable.getCause().getClass().getSimpleName()),
@@ -41,10 +39,11 @@ public class AppActivity extends Activity {
                                 new Intent(MainActivity.ACTION_EXIT));
 //                    MainActivity.self.finishAffinity();
                     }
-                    finish();
+//                    finish();
                     System.exit(1);
-                } catch (Throwable t) { }
+                } catch (Throwable ignore) { }
 //                MainActivity.logFatal(throwable);
+*/
             }
         });
     }

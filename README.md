@@ -1,57 +1,61 @@
-## LiteRadar Android transponder, MIT (c) 2022-2025 @miktim
+## LiteRadar Android transponder, MIT (c) 2022-2025 @miktim [RU](./README-RU.md)
 
-### Назначение  
-Обмен в группе или передача на сервер собственного местоположения по протоколу UDP.  
+### Purpose
+Exchange in a group or transfer to the server of your location via UDP protocol.  
 
-Последний релиз приложения здесь: [./app/release/](./app/release/)  
+Latest .apk build here: [./app/release/](./app/release/)  
 
-### Требования  
-Android 6+, Harmony OS 3+  
+### Requirements  
+Android 6+, HarmonyOS 3+  
 
-### Использование  
+### Usage  
 
-#### Идентификация  
-Индентификатором транспондера при передаче данных по сети служит открытый ключ RSA512. Подтверждение подлинности обеспечивает цифровая подпись пакета данных. При ином способе обмена: идентификатор - base64 encoded SHA1 hash бинарного представления открытого ключа.  
-Необязательное имя (псевдоним) транспондера имеет вспомогательное значение.
+#### Identification  
+The [transponder](https://en.wikipedia.org/wiki/Automatic_Dependent_Surveillance%E2%80%93Broadcast) identifier for data transmission over the network is the public RSA512 key. Authenticity is confirmed by a digital signature of the data packet. For other exchange methods the identifier is a base64 encoded SHA1 hash of the binary representation of the public key.  
+The optional name (alias) of the transponder has an auxiliary value.
 
-#### Режимы работы
+#### Operating modes
 <img
   src="./markdown/settings.png"
   alt="Settings" height=400 width=240/>  
-\- только трекер (по умолчанию). Данные о собственном местоположении в сеть не передаются.  
-\- член UDP multicast группы: 224.0.9.090:9099, time-to-live = 10 Передача и прием данных геолокации.  
-\- UDP клиент с указанием IP адреса и порта или имени доступного хоста и порта сервера. Только передача данных.  
+\- tracker only (default). No location data is transmitted to the network.  
+\- member of UDP multicast group: 224.0.9.090:9099. Transmitting and receiving geolocation data.  
+\- UDP client with specifying IP address and port or available host name and server port. Data transmission only.  
 
-В последних двух случаях возможен выбор сетевого интерфейса.
+In the last two cases, it is possible to select a network interface.
 
-#### Уведомления  
+#### Notifications  
 <img
   src="./markdown/notification.png"
   alt="Notification" height=400 width=240/>  
-Состояние транспондера указано в Android уведомлении. Сообщения об ошибках геолокации или сети сопровождаются звуковым сигналом.  
-Для вызова настроек коснитесь текста уведомления.  
+The transponder status is displayed in an Android notification. Location or network error messages are accompanied by a sound signal.  
+To access settings or restore app focus, tap the notification text.
 
-#### Взаимодействие с трекером
-Транспондер передает данные трекеру в формате JSON.  
+#### Interacting with the tracker
+The transponder transmits data to the tracker in JSON format.  
 Intent Action: "org.literadar.tracker.ACTION"  
 Intent extra data: "json"  
-Структура JSON пакета и управление трекером см. README https://github.com/miktim/mini-tracker  
+Tracker events and responses:  
+Intent Action: "org.literadar.tracker.EVENT"  
+Intent extra data: "json"  
 
-#### Дополнительные настройки  
-Настройки трекера хранятся в файле settings.json приложения.
+JSON package structure and tracker management in README  https://github.com/miktim/mini-tracker  
 
-### Структура UDP пакета  
-Данные пакуются в BigEndian порядке. Значения Double преобразуются в IEEE 754 long.
+#### Miscellaneous  
+Tracker settings are stored in the application's settings.json file.  
+In case of a crash, a fatal.log file is created.
 
+### UDP packet structure  
+Data is packed in BigEndian order. Double values ​​are converted to IEEE 754 long.  
 
-| Байт | Содержание |
+| Bytes | Contents |
 |:----:|------------|
 | 4    | magic number "LRdr" |
 | 1    | unsigned byte, length of public key in bytes (n) |
 | n    | public key |
 | 2    | packet version |
 | 1    | unsigned byte, length of transponder name (m) |
-| m    | transponder name (UTF-8) |
+| m    | UTF-8 transponder name (0:16 chars) |
 | 8    | long, timestamp in milliseconds (Epoch from 1 january 1970) |
 | 2    | short, location timeout in seconds (> 0) |
 | 8    | double, WGS-84 latititude in degrees (-90 : 90) |

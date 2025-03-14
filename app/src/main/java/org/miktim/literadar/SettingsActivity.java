@@ -6,11 +6,16 @@
  */
 package org.miktim.literadar;
 
+import static org.miktim.literadar.MainActivity.okDialog;
 import static org.miktim.literadar.Settings.MODE_UNICAST_CLIENT;
 import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
 
+import static java.lang.String.format;
+
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
@@ -27,10 +32,15 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.security.InvalidAlgorithmParameterException;
+import java.security.NoSuchAlgorithmException;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Enumeration;
@@ -43,6 +53,16 @@ public class SettingsActivity extends AppActivity
     CheckBox mTrackerChk;
     EditText mAddressEdt;
     Spinner mInterfaceSpn;
+    BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+            if (action.equals(MainActivity.ACTION_EXIT)) {
+                finish();
+            }
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -55,13 +75,38 @@ public class SettingsActivity extends AppActivity
             return insets;
         });
 
+        registerReceiver(mBroadcastReceiver, new IntentFilter(MainActivity.ACTION_EXIT));
+
         mSettings = MainActivity.sSettings;
         mTrackerChk = findViewById(R.id.trackerChk);
         mAddressEdt = findViewById(R.id.addressEdt);
         mInterfaceSpn = findViewById(R.id.interfaceSpn);
         fillLayout();
 
-//        throw new NullPointerException();
+//        throw new NullPointerException(); // test
+    }
+
+    @Override
+    public void finish() {
+        unregisterReceiver(mBroadcastReceiver);
+        super.finish();
+    }
+
+    Settings loadSettings(Context context) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
+        Settings settings = null;
+        File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
+        if (file.exists()) {
+            try (FileInputStream fis = new FileInputStream(file)) {
+                settings = new Settings();
+                settings.load(fis);
+            } catch (IOException | ParseException e) {
+                okDialog(getApplicationContext(),
+                        resString(R.string.err_settings_title),
+                        resString(R.string.err_settings_msg)
+                );
+            }
+        }
+        return settings;
     }
 
     void fillLayout() {
@@ -69,10 +114,11 @@ public class SettingsActivity extends AppActivity
         try {
             version = this.getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
         } catch (PackageManager.NameNotFoundException ignore) { }
-        ((TextView) findViewById(R.id.titleTxt)).setText(resString(R.string.app_name) + " " + version);
+        ((TextView) findViewById(R.id.titleTxt)).setText(
+                format("%s %s",resString(R.string.app_name), version));
         ((TextView) findViewById(R.id.keyTxt)).setText(resString(R.string.keyLbl));
         ((TextView) findViewById(R.id.keyDateTxt))
-                .setText(String.format("%s %s",
+                .setText(format("%s %s",
                         resString(R.string.key_dateLbl),
                         new SimpleDateFormat("yyyy-MM-dd").format(mSettings.getKeyTimeStamp())));
 
@@ -163,21 +209,17 @@ public class SettingsActivity extends AppActivity
     @Override
     public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
         Spinner spinner = (Spinner) parent;
-        switch (parent.getId()) {
-            case R.id.modeSpn: {
-                modeDependedSettings(position);
-                mSettings.mode = position;
-                if(position == Settings.MODE_TRACKER_ONLY) mSettings.showTracker = true;
-                break;
-            }
-            case R.id.interfaceSpn: {
-                try {
-                    mSettings.network.setInterface(
-                            spinner.getSelectedItem().toString().split("/")[0]);
-                } catch (SocketException e) {
-                    e.printStackTrace();
-                }
-                break;
+        int spinnerId = parent.getId();
+        if(spinnerId == R.id.modeSpn) {
+            modeDependedSettings(position);
+            mSettings.mode = position;
+            if(position == Settings.MODE_TRACKER_ONLY) mSettings.showTracker = true;
+        } else if(spinnerId == R.id.interfaceSpn) {
+            try {
+                mSettings.network.setInterface(
+                        spinner.getSelectedItem().toString().split("/")[0]);
+            } catch (SocketException e) {
+                e.printStackTrace();
             }
         }
     }
@@ -190,13 +232,6 @@ public class SettingsActivity extends AppActivity
         mSettings.setTrackerEnabled(mTrackerChk.isChecked());
     }
 
-    MainActivity.DialogAction mWrongAddress = new MainActivity.DialogAction() {
-        @Override
-        public void execute(int id) {
-            super.execute(id);
-        }
-    };
-
     boolean fillSettings() {
         String name = ((TextView) findViewById(R.id.nameEdt)).getText().toString();
         mSettings.name = name.substring(0, Math.min(name.length(), 16));
@@ -206,10 +241,9 @@ public class SettingsActivity extends AppActivity
                 mSettings.network.setRemoteAddress(
                         address.isEmpty() ? null : address);
         } catch (Exception e) {
-            MainActivity.showDialog(this,
+            okDialog(this,
                     resString(R.string.err_wrong_address),
-                    resString(R.string.required_address),
-                    "Ok", mWrongAddress);
+                    resString(R.string.required_address));
             mAddressEdt.requestFocus();
             return false;
         }
@@ -222,10 +256,9 @@ public class SettingsActivity extends AppActivity
             mSettings.save(fos);
 //            MainActivity.sSettings = mSettings;
         } catch (Exception e) {
-            MainActivity.showDialog(this,
+            okDialog(getApplicationContext(),
                     resString(R.string.err_settings_title),
-                    resString(R.string.err_settings_msg),
-                    "Ok", new MainActivity.DialogAction());
+                    resString(R.string.err_settings_msg));
         }
     }
 

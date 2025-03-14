@@ -39,29 +39,31 @@ public class TransponderService extends Service {
     LocationProvider.Handler mLocationHandler = new LocationProvider.Handler() {
         @Override
         public void onLocationChanged(Location location) {
+            resetError(R.string.err_geolocation);
             if (location == null) return;
             mOutgoingPacket.updateLocation(
                     location.getTime(),
-//                    System.currentTimeMillis(),
-                    mSettings.locations.timeout * 2L,
+                    mSettings.locations.minTime * 4L,
                     location.getLatitude(),
                     location.getLongitude(),
                     (int) location.getAccuracy());
             try {
                 packetToTracker(mOutgoingPacket);
-                if (mUdpSocket != null && mSettings.getMode() != Settings.MODE_TRACKER_ONLY)
+                if (mUdpSocket != null && mSettings.getMode() != Settings.MODE_TRACKER_ONLY) {
                     mUdpSocket.send(mOutgoingPacket.pack());
+                    resetError(R.string.err_network);
+                }
             } catch (java.security.GeneralSecurityException e) {
+// todo: fatal
                 e.printStackTrace();
             } catch (IOException e) {
-// todo
-                e.printStackTrace();
+                notifyError(R.string.err_network);
             }
         }
 
         @Override
         public void onOutOfLocationService() {
-
+            notifyError(R.string.err_geolocation);
         }
     };
 
@@ -92,21 +94,22 @@ public class TransponderService extends Service {
 
         @Override
         public void onPacket(UdpSocket udpSocket, DatagramPacket datagramPacket) {
+            resetError(R.string.err_network);
             try {
                 mIncomingPacket.unpack(Arrays.copyOf(datagramPacket.getData(), datagramPacket.getLength()));
 // todo favorites
                 packetToTracker(mIncomingPacket);
             } catch (IOException e) {
-// todo exception handling
-                e.printStackTrace();
+                notifyError(R.string.err_network);
             } catch (GeneralSecurityException e) {
+// todo statistics: bad packet
                 e.printStackTrace();
             }
         }
 
         @Override
         public void onError(UdpSocket udpSocket, Exception e) {
-// todo
+            notifyError(R.string.err_network);
         }
 
         @Override
@@ -114,7 +117,19 @@ public class TransponderService extends Service {
 
         }
     };
-
+    int mError;
+    void notifyError(int msgId) {
+        if(mError == 0 || mError == msgId) {
+            mError = msgId;
+            mNotifier.alert(resString(msgId));
+        }
+    }
+    void resetError(int msgId) {
+        if(mError == msgId) {
+            mError = 0;
+            mNotifier.notify(resString(R.string.on_air));
+        }
+    }
     void packetToTracker(Packet packet) throws IOException {
         if (mSettings.showTracker) {
             String json = packet.toJSON();
@@ -142,7 +157,7 @@ public class TransponderService extends Service {
         mNotifier.setActivity(MainActivity.sSettingsIntent);
         mNotifier.setPriority(Notifier.PRIORITY_MAX);
 
-        MainActivity.sService = this;
+        MainActivity.sServiceStarted = true;
 
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
@@ -188,13 +203,15 @@ public class TransponderService extends Service {
             }
         }
         // todo: too small minTime = 5 sec
-        mLocationProvider.connect(mSettings.locations.getTimeout() * 1000L, mSettings.locations.getDistance());
+        mLocationProvider.connect(
+                mSettings.locations.getMinTime() * 1000L,
+                mSettings.locations.getMinDistance());
         mNotifier.notifyTitle(notificationTitle());
     }
 
     @Override
     public void onDestroy() {
-        MainActivity.sService = null;
+        MainActivity.sServiceStarted = false;
         if (mUdpSocket != null) {
             mUdpSocket.close();
             mUdpSocket = null;

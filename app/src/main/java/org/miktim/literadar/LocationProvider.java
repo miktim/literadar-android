@@ -44,11 +44,19 @@ public class LocationProvider {
         mContext = context;
         mHandler = handler;
     }
-
     void renewLocation(){
-        mLocation = new Location("");
-        mLocation.setAccuracy(Float.MAX_VALUE);
-        mLastTime = System.currentTimeMillis();
+        synchronized(mLocation) {
+            mLocation = new Location("");
+            mLocation.setAccuracy(Float.MAX_VALUE);
+            mLastTime = System.currentTimeMillis();
+        }
+    }
+
+    public Location getLastLocation() {
+        return mLastLocation;
+    }
+    public boolean isOutOfService() {
+        return mEnabledProviders == 0;
     }
 
     @SuppressLint("MissingPermission")
@@ -90,13 +98,15 @@ public class LocationProvider {
             synchronized(mLocation) {
                 mLastLocation = mLocation;
             }
+            mHandler.onLocationChanged(mLastLocation);
             Log.d("LocationProvider",
                     format("%s %TT", mLastLocation.getProvider(),new Date(mLastLocation.getTime())));
-        }
-        if (mEnabledProviders == 0) {
-            mHandler.onOutOfLocationService();
         } else {
-            mHandler.onLocationChanged(mLastLocation);
+            if (mEnabledProviders == 0) {
+                 mHandler.onOutOfLocationService();
+            } else {
+                mHandler.onLocationChanged(null);
+            }
         }
         renewLocation();
     }

@@ -8,7 +8,6 @@
 package org.miktim.literadar;
 
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -40,7 +39,7 @@ public class TrackerActivity extends AppActivity {
             if (action.equals(TransponderService.ACTION_PACKET)) {
                 String msg = intent.getStringExtra(TransponderService.ACTION_PACKET_EXTRA);
                 mWebView.loadUrl("javascript: Tracker.webview.toTracker('" + msg + "')");
-            } else if (action.equals(MainActivity.ACTION_CLOSE) ||
+            } else if (action.equals(MainActivity.ACTION_CLOSE_TRACKER) ||
                     action.equals(MainActivity.ACTION_EXIT)) {
 //                done = true;
                 finish();
@@ -55,12 +54,12 @@ public class TrackerActivity extends AppActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tracker);
 
-        MainActivity.sTracker = this;
+        MainActivity.sTrackerStarted = true;
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(MainActivity.ACTION_EXIT);
         intentFilter.addAction(TransponderService.ACTION_PACKET);
-        intentFilter.addAction(MainActivity.ACTION_CLOSE);
+        intentFilter.addAction(MainActivity.ACTION_CLOSE_TRACKER);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -143,7 +142,7 @@ public class TrackerActivity extends AppActivity {
 
     @Override
     protected void onDestroy() {
-        MainActivity.sTracker = null;
+        MainActivity.sTrackerStarted = false;
         Log.d("TrackerActivity", "OnDestroy");
         mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
         destroyWebView();
