@@ -1,5 +1,5 @@
 /**
- * Notifier class
+ * Notifier class, MIT (c) 2019-2025 miktim@mail.ru
  *
  * Simple Android notifier.
  * Usage:
@@ -25,12 +25,7 @@
  *   stopForeground(false);
  * // cancel the notification in any way
  *
- * Author:  miktim@mail.ru
  * Created: 2019-03-15
- * Updated:
- *   2019-04-02 release ToneGenerator (alert method)
- *
- * License: MIT
  */
 
  package org.miktim.literadar;
@@ -60,14 +55,14 @@ public class Notifier {
     public static final int PRIORITY_MAX = 3;
     public static final String CHANNEL_NAME = "NotifierChannel";
 
-    private static int ZERO_ID = 0;
+    private static volatile int ZERO_ID = 0;
     private final int mNotificationId = ++ZERO_ID;
 
-    private static final int ALERT_BEEP_VOLUME = 30;
+    private static final int ALERT_BEEP_VOLUME = 75;
     private final Context mContext;
     private final String mChannelId;
-    private String mTitle;
-    private String mText = "";
+    private String mTitle = "";
+    private String mMessage = "";
     private final int mSmallIcon;
     private PendingIntent mPendingIntent;
     private int mPriority = PRIORITY_DEFAULT;
@@ -92,7 +87,7 @@ public class Notifier {
         NotificationCompat.Builder builder =
                 (new NotificationCompat.Builder(mContext, mChannelId))
                 .setContentTitle(mTitle)
-                .setContentText(mText)
+                .setContentText(mMessage)
                 .setContentIntent(mPendingIntent).setOngoing(true)
                 .setPriority(PRIORITY[mPriority]);
         if(mSmallIcon != 0) {
@@ -152,7 +147,7 @@ public class Notifier {
 
 // https://developer.android.com/guide/topics/ui/notifiers/notifications.html#Updating
     public void notify(String text) {
-        mText = text;
+        mMessage = text;
         show();
     }
 
@@ -172,7 +167,7 @@ public class Notifier {
     }
 
     public void startForeground(String text) {
-        mText = text;
+        mMessage = text;
         if(mContext instanceof Service) {
             ((Service)mContext).startForeground(mNotificationId, show());
         }
@@ -217,6 +212,8 @@ public class Notifier {
     };
 
     public void setPriority(int notifierPriority) {
+        if(notifierPriority < PRIORITY_MIN || notifierPriority > PRIORITY_MAX)
+            throw new IllegalArgumentException();
         mPriority = notifierPriority;
     }
 

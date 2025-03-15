@@ -1,7 +1,8 @@
 <resources>
-    <string name="app_name">LiteRadar</string>
-    <string name="keyLbl">Signature key: RSA 512 bit</string>
-    <string name="key_dateLbl">Created: </string>
+    <string name="app_name" translatable="false">LiteRadar</string>
+    <string name="titleFmt">%s %s settings</string>
+    <string name="keyFmt">Signature key: %s bit</string>
+    <string name="key_dateFmt">Created: %s</string>
     <string name="aliasLbl">Alias: </string>
     <string name="all_interfaces">All available</string>
     <string name="int_unavailable">/unavailable</string>

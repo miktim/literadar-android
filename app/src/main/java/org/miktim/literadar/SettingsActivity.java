@@ -48,7 +48,6 @@ import java.util.Enumeration;
 public class SettingsActivity extends AppActivity
         implements AdapterView.OnItemSelectedListener {
     Settings mSettings;
-    static final String ACTION_RESTART = "org.literadar.restart";
     String[] mInterfaceArray;
     CheckBox mTrackerChk;
     EditText mAddressEdt;
@@ -115,11 +114,11 @@ public class SettingsActivity extends AppActivity
             version = this.getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
         } catch (PackageManager.NameNotFoundException ignore) { }
         ((TextView) findViewById(R.id.titleTxt)).setText(
-                format("%s %s",resString(R.string.app_name), version));
-        ((TextView) findViewById(R.id.keyTxt)).setText(resString(R.string.keyLbl));
-        ((TextView) findViewById(R.id.keyDateTxt))
-                .setText(format("%s %s",
-                        resString(R.string.key_dateLbl),
+                format(resString(R.string.titleFmt),resString(R.string.app_name), version));
+        ((TextView) findViewById(R.id.keyTxt)).setText(
+                format(resString(R.string.keyFmt), mSettings.algorithm));
+        ((TextView) findViewById(R.id.keyDateTxt)).setText
+                (format(resString(R.string.key_dateFmt),
                         new SimpleDateFormat("yyyy-MM-dd").format(mSettings.getKeyTimeStamp())));
 
         ((TextView) findViewById(R.id.nameEdt)).setText(mSettings.name);
@@ -278,7 +277,7 @@ public class SettingsActivity extends AppActivity
     public void restartBtnClicked(View v) {
         if (fillSettings()) { // returns false on illegal params
             saveSettings(this);
-            sendBroadcast(this, new Intent(ACTION_RESTART));
+            sendBroadcast(this, new Intent(MainActivity.ACTION_RESTART));
             finish();
         }
     }

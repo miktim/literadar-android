@@ -27,6 +27,10 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 public class TrackerActivity extends AppActivity {
+    static final String TRACKER_ACTION = "org.literadar.tracker.ACTION";
+    static final String TRACKER_EVENT = "org.literadar.tracker.EVENT";
+    static final String TRACKER_EXTRA = "json";
+    static final String ACTION_TRACKER_CLOSE = "org.literadar.CLOSE_TRACKER";
 
     private WebView mWebView;
 
@@ -36,17 +40,15 @@ public class TrackerActivity extends AppActivity {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
-            if (action.equals(TransponderService.ACTION_PACKET)) {
-                String msg = intent.getStringExtra(TransponderService.ACTION_PACKET_EXTRA);
+            if (action.equals(TRACKER_ACTION)) {
+                String msg = intent.getStringExtra(TRACKER_EXTRA);
                 mWebView.loadUrl("javascript: Tracker.webview.toTracker('" + msg + "')");
-            } else if (action.equals(MainActivity.ACTION_CLOSE_TRACKER) ||
+            } else if (action.equals(ACTION_TRACKER_CLOSE) ||
                     action.equals(MainActivity.ACTION_EXIT)) {
-//                done = true;
                 finish();
             }
         }
     };
-
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override
@@ -58,8 +60,8 @@ public class TrackerActivity extends AppActivity {
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(MainActivity.ACTION_EXIT);
-        intentFilter.addAction(TransponderService.ACTION_PACKET);
-        intentFilter.addAction(MainActivity.ACTION_CLOSE_TRACKER);
+        intentFilter.addAction(TRACKER_ACTION);
+        intentFilter.addAction(ACTION_TRACKER_CLOSE);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
             Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
@@ -70,7 +72,6 @@ public class TrackerActivity extends AppActivity {
         mWebView = findViewById(R.id.webView);
 
         mWebView.getSettings().setAllowFileAccess(false);
-
         mWebView.getSettings().setJavaScriptEnabled(true);
         mWebView.getSettings().setGeolocationEnabled(true);
         mWebView.setWebChromeClient(new WebChromeClient() {
@@ -81,9 +82,9 @@ public class TrackerActivity extends AppActivity {
         String url = getIntent().getStringExtra("url"); //MainActivity.sSettings.trackerUrl;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) { // Android 4.4
             WebView.setWebContentsDebuggingEnabled(true);
-            if (BuildConfig.DEBUG) {
-                url = url.replace("mode=", "mode=debug");
-            }
+//            if (BuildConfig.DEBUG) {
+//                url = url.replace("mode=", "mode=debug");
+//            }
         }
 
         mWebView.setWebViewClient(new WebViewClient() {
@@ -114,39 +115,27 @@ public class TrackerActivity extends AppActivity {
 
         /** get from WebPage */
         @JavascriptInterface
-        public void fromTracker(String msg) {
+        public void fromTracker(String json) {
+            Intent intent = new Intent(TRACKER_EVENT);
+            intent.putExtra(TRACKER_EXTRA, json);
+            MainActivity.sendBroadcast(mContext, intent);
+
 // todo error event
-            Log.d("From tracker", msg);
+            Log.d("From tracker", json);
         }
     }
-    @Override
-    public void onStart() {
-        super.onStart();
-    }
-/*
-    @Override
-    protected void onStop(){
-        super.onStop();
-        Intent intent = new Intent(this, TrackerActivity.class);
-        startActivity(intent);
-    }
-*/
 
     @Override
     public void onBackPressed() {
-//        if (mApplication.isServiceStarted())
             moveTaskToBack(true);
-//        else finish();
     }
-
 
     @Override
     protected void onDestroy() {
-        MainActivity.sTrackerStarted = false;
-        Log.d("TrackerActivity", "OnDestroy");
-        mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
-        destroyWebView();
         super.onDestroy();
+        destroyWebView();
+        mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
+        MainActivity.sTrackerStarted = false;
     }
 
     // https://stackoverflow.com/questions/17418503/destroy-webview-in-android

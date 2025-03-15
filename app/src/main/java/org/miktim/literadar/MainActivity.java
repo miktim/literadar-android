@@ -17,6 +17,7 @@ import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
 
 import static java.lang.String.format;
 import static java.lang.System.exit;
+import static java.lang.Thread.sleep;
 
 import android.Manifest;
 import android.app.AlertDialog;
@@ -40,12 +41,11 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
-import java.security.spec.InvalidKeySpecException;
 import java.text.ParseException;
 
 public class MainActivity extends AppActivity {
-    static final String ACTION_CLOSE_TRACKER = "org.literadar.CLOSE_TRACKER";
     static final String ACTION_EXIT = "org.literadar.EXIT";
+    static final String ACTION_RESTART = "org.literadar.RESTART";
 
     Context mContext;
 
@@ -58,18 +58,18 @@ public class MainActivity extends AppActivity {
     static Intent sSettingsIntent;
     static Intent sServiceIntent;
 
+    LocalBroadcastManager mLocalBroadcastManager;
     BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
             if (action.equals(ACTION_EXIT)) {
                 finish();
-            } else if (action.equals(SettingsActivity.ACTION_RESTART)) {
+            } else if (action.equals(ACTION_RESTART)) {
                 startTrackerActivity();
             }
         }
     };
-//    LocalBroadcastManager mLocalBroadcastManager;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,12 +81,11 @@ public class MainActivity extends AppActivity {
 
         mContext = getApplicationContext();
 
-//        mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
+        mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(ACTION_EXIT);
-        intentFilter.addAction(SettingsActivity.ACTION_RESTART);
-//        mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
-        registerReceiver(mBroadcastReceiver, intentFilter);
+        intentFilter.addAction(ACTION_RESTART);
+        mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
 
         sTrackerIntent = new Intent(this, TrackerActivity.class);
 // https://developer.android.com/reference/android/content/Intent#FLAG_ACTIVITY_NEW_TASK
@@ -106,9 +105,8 @@ public class MainActivity extends AppActivity {
     @Override
     public void finish() {
         super.finish();
-//        closeTrackerActivity();
-//        mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
-        unregisterReceiver(mBroadcastReceiver);
+        closeTrackerActivity();
+        mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
     }
 
     @Override
@@ -146,7 +144,7 @@ public class MainActivity extends AppActivity {
     }
 
     void closeTrackerActivity() {
-        sendBroadcast(this, new Intent(ACTION_CLOSE_TRACKER));
+        sendBroadcast(this, new Intent(TrackerActivity.ACTION_TRACKER_CLOSE));
     }
 
     public void checkPermission(String[] permissions, int requestCode) {
@@ -245,22 +243,21 @@ public class MainActivity extends AppActivity {
 
     static Throwable sFatal = null;
     static void fatal(Context context, Throwable throwable) {
+        synchronized (sFatal) {
+            if(sFatal != null) return;
+            sFatal = throwable;
+        }
         File file = new File(context.getFilesDir(), "fatal.log");
         try (PrintStream ps = new PrintStream(file)) {
-            if (MainActivity.sFatal == null) {
-                MainActivity.sFatal = throwable;
-                throwable.printStackTrace(ps);
-                Throwable cause = throwable.getCause();
-                if(cause == null) cause = throwable;
-                Toast.makeText(context,
-                        format("LiteRadar FATAL: %s",
-                                cause.getClass().getSimpleName()),
-                        Toast.LENGTH_SHORT).show();
-                LocalBroadcastManager.getInstance(context).sendBroadcast(
-                        new Intent(ACTION_EXIT));
-
-                exit(1);
-            }
+            throwable.printStackTrace(ps);
+            Throwable cause = throwable.getCause();
+            if(cause == null) cause = throwable;
+            Toast.makeText(context,
+                    format("LiteRadar FATAL: %s", cause.getClass().getSimpleName()),
+                    Toast.LENGTH_LONG).show();
+            sleep(3000);
+            sendBroadcast(context, new Intent(ACTION_EXIT));
+            exit(1);
         } catch (Throwable ignore) {}
     }
 }

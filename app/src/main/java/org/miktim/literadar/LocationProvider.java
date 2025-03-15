@@ -75,7 +75,7 @@ public class LocationProvider {
         }
 
         for (ProviderListener listener : mListeners) {
-            listener.connectListener(minTime, minDistance);// todo minDistance);
+            listener.connectListener(minTime, minDistance);//
         }
         renewLocation();
         mTimer = new Timer();
@@ -127,7 +127,7 @@ public class LocationProvider {
         public void onLocationChanged(Location location) {
             synchronized (mLocation) {
                 if (location != null
-                    && location.getTime() > mLastTime
+                    && location.getTime() >= mLastTime //todo
                     && location.getAccuracy() < mLocation.getAccuracy() )
                     mLocation = location;
             }

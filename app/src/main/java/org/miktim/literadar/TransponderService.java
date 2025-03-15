@@ -28,8 +28,6 @@ import java.security.GeneralSecurityException;
 import java.util.Arrays;
 
 public class TransponderService extends Service {
-    static String ACTION_PACKET = "org.literadar.tracker.ACTION";
-    static String ACTION_PACKET_EXTRA = "json";
     Settings mSettings;
     Context mContext = this;
 
@@ -43,10 +41,10 @@ public class TransponderService extends Service {
             if (location == null) return;
             mOutgoingPacket.updateLocation(
                     location.getTime(),
-                    mSettings.locations.minTime * 4L,
+                    mSettings.locations.getTimeout(),
                     location.getLatitude(),
                     location.getLongitude(),
-                    (int) location.getAccuracy());
+                    location.getAccuracy());
             try {
                 packetToTracker(mOutgoingPacket);
                 if (mUdpSocket != null && mSettings.getMode() != Settings.MODE_TRACKER_ONLY) {
@@ -73,7 +71,7 @@ public class TransponderService extends Service {
             String action = intent.getAction();
             if (action.equals(MainActivity.ACTION_EXIT)) {
                 stopSelf();
-            } else if (action.equals(SettingsActivity.ACTION_RESTART)) {
+            } else if (action.equals(MainActivity.ACTION_RESTART)) {
                 mLocationProvider.disconnect();
                 if (mUdpSocket != null) {
                     mUdpSocket.close();
@@ -133,8 +131,8 @@ public class TransponderService extends Service {
     void packetToTracker(Packet packet) throws IOException {
         if (mSettings.showTracker) {
             String json = packet.toJSON();
-            Intent intent = new Intent(ACTION_PACKET);
-            intent.putExtra(ACTION_PACKET_EXTRA, json);
+            Intent intent = new Intent(TrackerActivity.TRACKER_ACTION);
+            intent.putExtra(TrackerActivity.TRACKER_EXTRA, json);
             sendBroadcast(mContext, intent);
         }
     }
@@ -162,7 +160,7 @@ public class TransponderService extends Service {
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction(MainActivity.ACTION_EXIT);
-        intentFilter.addAction(SettingsActivity.ACTION_RESTART);
+        intentFilter.addAction(MainActivity.ACTION_RESTART);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
 
         mLocationProvider = new LocationProvider(this, mLocationHandler);
