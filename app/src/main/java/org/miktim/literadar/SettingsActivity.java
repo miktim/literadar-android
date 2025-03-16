@@ -19,6 +19,7 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
@@ -80,6 +81,7 @@ public class SettingsActivity extends AppActivity
         mTrackerChk = findViewById(R.id.trackerChk);
         mAddressEdt = findViewById(R.id.addressEdt);
         mInterfaceSpn = findViewById(R.id.interfaceSpn);
+        initSections();
         fillLayout();
 
 //        throw new NullPointerException(); // test
@@ -128,6 +130,15 @@ public class SettingsActivity extends AppActivity
                 getListIndex(mInterfaceArray, iName));
         initDropdownList(findViewById(R.id.modeSpn), getResources().getStringArray(R.array.mode_array), mSettings.mode);
         modeDependedSettings(mSettings.mode); // sets address, tracker enabled
+
+        // Geolocation
+        ((TextView) findViewById(R.id.minTimeEdt)).setText(
+                String.valueOf(mSettings.locations.getMinTime()));
+        ((TextView) findViewById(R.id.minDistanceEdt)).setText(
+                String.valueOf(mSettings.locations.getMinDistance()));
+        ((TextView) findViewById(R.id.timeoutEdt)).setText(
+                String.valueOf(mSettings.locations.getTimeout()));
+
     }
 
     int getListIndex(String[] iList, String itemName) {
@@ -246,7 +257,53 @@ public class SettingsActivity extends AppActivity
             mAddressEdt.requestFocus();
             return false;
         }
+
+        // Geolocation
+        mSettings.locations.minTime = checkNumberView(R.id.minTimeEdt, 1);
+        mSettings.locations.minDistance = checkNumberView(R.id.minDistanceEdt, 10);
+        mSettings.locations.timeout = checkNumberView(R.id.timeoutEdt,mSettings.locations.minTime * 2);
+
         return true;
+    }
+    int checkNumberView(int viewId, int minValue) {
+        TextView view = ((TextView) findViewById(viewId));
+        String s = view.getText().toString();
+        if(s.isEmpty() || Integer.parseInt(s) < minValue) {
+            view.setText(String.valueOf(minValue));
+            return minValue;
+        }
+        return Integer.parseInt(s);
+    }
+
+// Settings sections
+    final int[] mSections = new int[]{R.id.sectionIdentification,R.id.sectionModes,R.id.sectionLocation};
+    void initSections() {
+        for(int sectionId : mSections)
+            setSectionVisibility(findViewById(sectionId), false);
+    }
+    public void sectionClicked(View view) {
+        View nextView = getNextView(view);
+        setSectionVisibility(view,!(nextView.getVisibility() == View.VISIBLE));
+    }
+    void setSectionVisibility(View view, boolean visible) {
+        String leftBracket = "⟨";
+        String rightBracket = "⟩";
+        String text = ((TextView) view).getText().toString();
+        text = text.replace(leftBracket,"").
+                replace(rightBracket,"").trim();
+        View nextView = getNextView(view);
+        if (!visible) {
+            nextView.setVisibility(View.GONE);
+            leftBracket = "";
+        } else {
+            nextView.setVisibility(View.VISIBLE);
+            rightBracket = "";
+        }
+        ((TextView) view).setText(format("%s %s %s", leftBracket, text, rightBracket));
+    }
+    View getNextView(View view) {
+        ViewGroup viewGroup = ((ViewGroup)view.getParent());
+        return viewGroup.getChildAt(viewGroup.indexOfChild(view) + 1);
     }
 
     void saveSettings(Context context) {

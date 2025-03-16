@@ -25,5 +25,12 @@
     <string name="err_network">Ошибка сети</string>
     <string name="on_air">Коснитесь здесь для вызова LiteRadar</string>
     <string name="titleFmt">%s %s настройки</string>
+    <string name="section_identificationLbl">Идентификация</string>
+    <string name="section_locationLbl">Геолокация</string>
+    <string name="minTimeLbl">"Интервал (сек): "</string>
+    <string name="minDistanceLbl">"Дистанция (м): "</string>
+    <string name="timeoutLbl">"Таймаут (сек): "</string>
+    <string name="section_favoritesLbl">Избранное</string>
+    <string name="section_modesLbl">Режимы</string>
 
 </resources>

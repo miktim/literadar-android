@@ -25,5 +25,12 @@
     <string name="err_geolocation">Geolocation unavailable</string>
     <string name="err_network">Network error</string>
     <string name="on_air">Tap here to show the LiteRadar</string>
+    <string name="section_identificationLbl">Identification</string>
+    <string name="section_modesLbl">Modes</string>
+    <string name="section_locationLbl">Geolocation</string>
+    <string name="minTimeLbl">"Interval (sec): "</string>
+    <string name="minDistanceLbl">Distance (m):</string>
+    <string name="timeoutLbl">Timeout (sec):</string>
+    <string name="section_favoritesLbl">Favorites</string>
 
 </resources>
