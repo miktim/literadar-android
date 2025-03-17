@@ -2,7 +2,7 @@
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/main"
-    android:layout_width="match_parent"
+    android:layout_width="300sp"
     android:layout_height="match_parent"
     tools:context=".SettingsActivity">
 
@@ -38,11 +38,11 @@
                 android:id="@+id/sectionIdentification"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:textSize="18sp"
-                android:textColor="@color/white"
                 android:layout_weight="1"
                 android:onClick="sectionClicked"
-                android:text="@string/section_identificationLbl"  />
+                android:text="@string/section_identificationLbl"
+                android:textColor="@color/white"
+                android:textSize="18sp" />
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -91,9 +91,9 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:onClick="sectionClicked"
                 android:text="@string/section_modesLbl"
                 android:textColor="@color/white"
-                android:onClick="sectionClicked"
                 android:textSize="18sp" />
 
             <LinearLayout
@@ -137,30 +137,54 @@
                     android:layout_height="wrap_content"
                     android:visibility="visible" />
 
-                <TextView
-                    android:id="@+id/textView5"
+                <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="@string/addressLbl" />
+                    android:orientation="horizontal">
 
-                <EditText
-                    android:id="@+id/addressEdt"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:enabled="true"
-                    android:inputType="textUri"
-                    android:textAllCaps="false"
-                    android:textSize="15sp" />
+                    <TextView
+                        android:id="@+id/textView5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/addressLbl" />
+
+                    <EditText
+                        android:id="@+id/addressEdt"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:enabled="true"
+                        android:inputType="textUri"
+                        android:textSize="15sp" />
+                </LinearLayout>
 
             </LinearLayout>
-
             <TextView
+                android:id="@+id/sectionFavorites"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:onClick="sectionClicked"
+                android:text="@string/section_favoritesLbl"
+                android:textColor="@color/white"
+                android:textSize="18sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+        </LinearLayout>
+
+
+        <TextView
                 android:id="@+id/sectionLocation"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="@string/section_locationLbl"
                 android:onClick="sectionClicked"
+                android:text="@string/section_locationLbl"
                 android:textColor="@color/white"
                 android:textSize="18sp" />
 
@@ -190,27 +214,6 @@
                         android:textSize="15sp" />
 
                     <TextView
-                        android:id="@+id/textView6"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="@string/minDistanceLbl" />
-
-                    <EditText
-                        android:id="@+id/minDistanceEdt"
-                        android:layout_width="30sp"
-                        android:layout_height="wrap_content"
-                        android:layout_weight="1"
-                        android:maxLength="2"
-                        android:inputType="number"
-                        android:textSize="15sp" />
-                </LinearLayout>
-
-              <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="horizontal">
-
-                    <TextView
                         android:id="@+id/textView7"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
@@ -220,10 +223,33 @@
                         android:id="@+id/timeoutEdt"
                         android:layout_width="40sp"
                         android:layout_height="wrap_content"
-                        android:maxLength="3"
+                        android:layout_weight="1"
                         android:inputType="number"
+                        android:maxLength="3"
+                        android:textSize="15sp" />
+
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/textView6"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/minDistanceLbl" />
+
+                    <EditText
+                        android:id="@+id/minDistanceEdt"
+                        android:layout_width="30sp"
+                        android:layout_height="wrap_content"
+                        android:inputType="number"
+                        android:maxLength="2"
                         android:textSize="15sp" />
                 </LinearLayout>
+
             </LinearLayout>
 
             <LinearLayout

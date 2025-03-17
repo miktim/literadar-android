@@ -260,7 +260,7 @@ public class SettingsActivity extends AppActivity
 
         // Geolocation
         mSettings.locations.minTime = checkNumberView(R.id.minTimeEdt, 1);
-        mSettings.locations.minDistance = checkNumberView(R.id.minDistanceEdt, 10);
+        mSettings.locations.minDistance = checkNumberView(R.id.minDistanceEdt, 0);
         mSettings.locations.timeout = checkNumberView(R.id.timeoutEdt,mSettings.locations.minTime * 2);
 
         return true;
@@ -276,7 +276,12 @@ public class SettingsActivity extends AppActivity
     }
 
 // Settings sections
-    final int[] mSections = new int[]{R.id.sectionIdentification,R.id.sectionModes,R.id.sectionLocation};
+    final int[] mSections = new int[]{
+        R.id.sectionIdentification,
+        R.id.sectionModes,
+        R.id.sectionFavorites,
+        R.id.sectionLocation};
+
     void initSections() {
         for(int sectionId : mSections)
             setSectionVisibility(findViewById(sectionId), false);
