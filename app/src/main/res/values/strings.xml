@@ -14,23 +14,21 @@
     </string-array>
     <string name="tracker_showLbl">show tracker</string>
     <string name="int_selectLbl">Select interface:</string>
-    <string name="addressLbl">Remote address:</string>
+    <string name="addressLbl">IP address:</string>
     <string name="exitLbl">Exit LiteRadar</string>
     <string name="cancelLbl">Cancel</string>
     <string name="restartLbl">Save &amp; Restart</string>
     <string name="err_wrong_address">Wrong or missed address!</string>
-    <string name="required_address">Required: ip:port or reachable domain:port</string>
+    <string name="required_address">"Required: ipaddress:port "</string>
     <string name="err_settings_title">Settings file error.</string>
     <string name="err_settings_msg">Сontinue with the current settings.</string>
     <string name="err_geolocation">Geolocation unavailable</string>
     <string name="err_network">Network error</string>
     <string name="on_air">Tap here to show the LiteRadar</string>
-    <string name="section_identificationLbl">Identification</string>
-    <string name="section_modesLbl">Modes</string>
-    <string name="section_locationLbl">Geolocation</string>
-    <string name="minTimeLbl">"Interval (sec): "</string>
-    <string name="minDistanceLbl">Distance (m):</string>
-    <string name="timeoutLbl">Timeout (sec):</string>
+    <string name="section_generalLbl">General</string>
+    <string name="favorites_onlyLbl">favorites only</string>
+    <string name="minTimeLbl">"Geolocation interval (sec): "</string>
     <string name="section_favoritesLbl">Favorites</string>
+
 
 </resources>

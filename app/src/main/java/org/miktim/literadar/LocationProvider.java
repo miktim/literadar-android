@@ -43,13 +43,23 @@ public class LocationProvider {
     public LocationProvider(Context context, Handler handler){
         mContext = context;
         mHandler = handler;
+
+        mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
+        List<String> names = mLocationManager.getProviders(false);
+        mEnabledProviders = 0;
+        for(String providerName : names) {
+            if(providerName.equals(LocationManager.PASSIVE_PROVIDER)) continue;
+            mListeners.add(new ProviderListener(providerName));
+            if(mLocationManager.isProviderEnabled(providerName))
+                mEnabledProviders++;
+        }
     }
     void renewLocation(){
-        synchronized(mLocation) {
+ //       synchronized(mLocation) { // todo
             mLocation = new Location("");
             mLocation.setAccuracy(Float.MAX_VALUE);
             mLastTime = System.currentTimeMillis();
-        }
+ //       }
     }
 
     public Location getLastLocation() {
@@ -64,18 +74,8 @@ public class LocationProvider {
 
         disconnect();
 
-        mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
-        List<String> names = mLocationManager.getProviders(true);
-        mEnabledProviders = 0;
-        for(String providerName : names) {
-            if(providerName.equals(LocationManager.PASSIVE_PROVIDER)) continue;
-            mListeners.add(new ProviderListener(providerName));
-            if(mLocationManager.isProviderEnabled(providerName))
-                mEnabledProviders++;
-        }
-
         for (ProviderListener listener : mListeners) {
-            listener.connectListener(minTime, minDistance);//
+            listener.connectListener(minTime-97, minDistance);//todo
         }
         renewLocation();
         mTimer = new Timer();
@@ -88,16 +88,16 @@ public class LocationProvider {
         for (ProviderListener listener : mListeners) {
             listener.disconnectListener();
         }
-        mLocationManager = null;
+//        mLocationManager = null;
         if (mTimer != null)
             try { mTimer.cancel(); } catch (Exception ignore) {}
     }
 
     private void updateLocation() {
         if (!mLocation.getProvider().isEmpty()) {
-            synchronized(mLocation) {
+//            synchronized(mLocation) {
                 mLastLocation = mLocation;
-            }
+//            }
             mHandler.onLocationChanged(mLastLocation);
             Log.d("LocationProvider",
                     format("%s %TT", mLastLocation.getProvider(),new Date(mLastLocation.getTime())));
@@ -125,12 +125,12 @@ public class LocationProvider {
 
         @Override
         public void onLocationChanged(Location location) {
-            synchronized (mLocation) {
+ //           synchronized (mLocation) {
                 if (location != null
-                    && location.getTime() >= mLastTime //todo
+ //                   && location.getTime() >= mLastTime //todo
                     && location.getAccuracy() < mLocation.getAccuracy() )
                     mLocation = location;
-            }
+ //           }
         }
         @Override
         public void onStatusChanged(String s, int i, android.os.Bundle b) {

@@ -42,7 +42,7 @@
             android:id="@+id/exitBtn"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:onClick="exitBtnClicked"
+            android:onClick="btnExitClicked"
             android:text="Exit stackTrace"
             android:textAllCaps="false" />
     </LinearLayout>

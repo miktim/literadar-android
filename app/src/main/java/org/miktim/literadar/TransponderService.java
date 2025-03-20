@@ -31,7 +31,6 @@ public class TransponderService extends Service {
     Settings mSettings;
     Context mContext = this;
 
-    Packet mIncomingPacket = new Packet();
     Packet mOutgoingPacket;
     LocationProvider mLocationProvider;
     LocationProvider.Handler mLocationHandler = new LocationProvider.Handler() {
@@ -41,7 +40,7 @@ public class TransponderService extends Service {
             if (location == null) return;
             mOutgoingPacket.updateLocation(
                     location.getTime(),
-                    mSettings.locations.getTimeout(),
+                    mSettings.locations.getMinTime() * 2,
                     location.getLatitude(),
                     location.getLongitude(),
                     location.getAccuracy());
@@ -94,9 +93,11 @@ public class TransponderService extends Service {
         public void onPacket(UdpSocket udpSocket, DatagramPacket datagramPacket) {
             resetError(R.string.err_network);
             try {
-                mIncomingPacket.unpack(Arrays.copyOf(datagramPacket.getData(), datagramPacket.getLength()));
-// todo favorites
-                packetToTracker(mIncomingPacket);
+                Packet incomingPacket = new Packet();
+                incomingPacket.unpack(Arrays.copyOf(datagramPacket.getData(), datagramPacket.getLength()));
+                Favorites.Entry entry = mSettings.favorites.updateEntry(incomingPacket);
+                incomingPacket.iconid = entry.getFavorite() ? 1 : 0; // green : gray
+                packetToTracker(incomingPacket);
             } catch (IOException e) {
                 notifyError(R.string.err_network);
             } catch (GeneralSecurityException e) {
@@ -163,7 +164,7 @@ public class TransponderService extends Service {
         intentFilter.addAction(MainActivity.ACTION_RESTART);
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
 
-        mLocationProvider = new LocationProvider(this, mLocationHandler);
+        mLocationProvider = new LocationProvider(MainActivity.mContext, mLocationHandler);
     }
     String notificationTitle() {
         return  format("%s: %s",
@@ -202,8 +203,8 @@ public class TransponderService extends Service {
         }
         // todo: too small minTime = 5 sec
         mLocationProvider.connect(
-                mSettings.locations.getMinTime() * 1000L,
-                mSettings.locations.getMinDistance());
+                mSettings.locations.getMinTime() * 1000L, 1F);
+//                mSettings.locations.getMinDistance());
         mNotifier.notifyTitle(notificationTitle());
     }
 

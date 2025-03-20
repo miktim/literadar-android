@@ -47,7 +47,7 @@ public class MainActivity extends AppActivity {
     static final String ACTION_EXIT = "org.literadar.EXIT";
     static final String ACTION_RESTART = "org.literadar.RESTART";
 
-    Context mContext;
+    static Context mContext;
 
     static Settings sSettings;
     static boolean sServiceStarted = false;

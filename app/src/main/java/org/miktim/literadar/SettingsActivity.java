@@ -25,12 +25,16 @@ import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.Spinner;
+import android.widget.TableLayout;
+import android.widget.TableRow;
 import android.widget.TextView;
 
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import com.google.android.material.tabs.TabLayout;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -53,6 +57,8 @@ public class SettingsActivity extends AppActivity
     CheckBox mTrackerChk;
     EditText mAddressEdt;
     Spinner mInterfaceSpn;
+    TabLayout mTabLayout;
+
     BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
 
         @Override
@@ -76,12 +82,14 @@ public class SettingsActivity extends AppActivity
         });
 
         registerReceiver(mBroadcastReceiver, new IntentFilter(MainActivity.ACTION_EXIT));
+        mTabLayout = findViewById(R.id.sectionTabs);
+        mTabLayout.addOnTabSelectedListener (mTabListener);
+        mTabLayout.setTabMode(TabLayout.MODE_SCROLLABLE);
 
         mSettings = MainActivity.sSettings;
         mTrackerChk = findViewById(R.id.trackerChk);
         mAddressEdt = findViewById(R.id.addressEdt);
         mInterfaceSpn = findViewById(R.id.interfaceSpn);
-        initSections();
         fillLayout();
 
 //        throw new NullPointerException(); // test
@@ -90,6 +98,7 @@ public class SettingsActivity extends AppActivity
     @Override
     public void finish() {
         unregisterReceiver(mBroadcastReceiver);
+        mTabLayout.removeOnTabSelectedListener(mTabListener);
         super.finish();
     }
 
@@ -134,10 +143,6 @@ public class SettingsActivity extends AppActivity
         // Geolocation
         ((TextView) findViewById(R.id.minTimeEdt)).setText(
                 String.valueOf(mSettings.locations.getMinTime()));
-        ((TextView) findViewById(R.id.minDistanceEdt)).setText(
-                String.valueOf(mSettings.locations.getMinDistance()));
-        ((TextView) findViewById(R.id.timeoutEdt)).setText(
-                String.valueOf(mSettings.locations.getTimeout()));
 
     }
 
@@ -212,7 +217,7 @@ public class SettingsActivity extends AppActivity
         return (getResources().getString(resString));
     }
 
-    public void clipTagClicked(View v) {
+    public void btnClipTagClicked(View v) {
 // todo
     }
 
@@ -238,7 +243,7 @@ public class SettingsActivity extends AppActivity
     public void onNothingSelected(AdapterView<?> parent) {
     }
 
-    public void trackerChkClicked(View v) {
+    public void chkTrackerClicked(View v) {
         mSettings.setTrackerEnabled(mTrackerChk.isChecked());
     }
 
@@ -260,8 +265,8 @@ public class SettingsActivity extends AppActivity
 
         // Geolocation
         mSettings.locations.minTime = checkNumberView(R.id.minTimeEdt, 1);
-        mSettings.locations.minDistance = checkNumberView(R.id.minDistanceEdt, 0);
-        mSettings.locations.timeout = checkNumberView(R.id.timeoutEdt,mSettings.locations.minTime * 2);
+//        mSettings.locations.minDistance = checkNumberView(R.id.minDistanceEdt, 0);
+//        mSettings.locations.timeout = checkNumberView(R.id.timeoutEdt,mSettings.locations.minTime * 2);
 
         return true;
     }
@@ -276,39 +281,80 @@ public class SettingsActivity extends AppActivity
     }
 
 // Settings sections
-    final int[] mSections = new int[]{
-        R.id.sectionIdentification,
-        R.id.sectionModes,
-        R.id.sectionFavorites,
-        R.id.sectionLocation};
 
-    void initSections() {
-        for(int sectionId : mSections)
-            setSectionVisibility(findViewById(sectionId), false);
+    void setViewVisibility(int viewId, boolean visible) {
+        setViewVisibility(findViewById(viewId), visible);
     }
-    public void sectionClicked(View view) {
-        View nextView = getNextView(view);
-        setSectionVisibility(view,!(nextView.getVisibility() == View.VISIBLE));
-    }
-    void setSectionVisibility(View view, boolean visible) {
-        String leftBracket = "⟨";
-        String rightBracket = "⟩";
-        String text = ((TextView) view).getText().toString();
-        text = text.replace(leftBracket,"").
-                replace(rightBracket,"").trim();
-        View nextView = getNextView(view);
-        if (!visible) {
-            nextView.setVisibility(View.GONE);
-            leftBracket = "";
+    void setViewVisibility(View view, boolean visible) {
+        if (visible) {
+            view.setVisibility(View.VISIBLE);
         } else {
-            nextView.setVisibility(View.VISIBLE);
-            rightBracket = "";
+            view.setVisibility(View.GONE);
         }
-        ((TextView) view).setText(format("%s %s %s", leftBracket, text, rightBracket));
     }
-    View getNextView(View view) {
-        ViewGroup viewGroup = ((ViewGroup)view.getParent());
-        return viewGroup.getChildAt(viewGroup.indexOfChild(view) + 1);
+    int[] mSectionIds = new int[] {
+            R.id.sectionGeneral,
+            R.id.sectionFavorites,
+            0 // exit literadar
+    };
+    TabLayout.OnTabSelectedListener mTabListener = new TabLayout.OnTabSelectedListener() {
+
+        @Override
+        public void onTabSelected(TabLayout.Tab tab) {
+            int tabPos = tab.getPosition();
+            int sectionRid = mSectionIds[tabPos];
+            if(sectionRid == 0) {
+                exitLiteRadar();
+                return;
+            }
+            setViewVisibility(sectionRid,true);
+            if(tabPos == 1) fillFavoritesLayout();
+        }
+
+        @Override
+        public void onTabUnselected(TabLayout.Tab tab) {
+            int tabPos = tab.getPosition();
+            setViewVisibility(mSectionIds[tabPos], false);
+        }
+
+        @Override
+        public void onTabReselected(TabLayout.Tab tab) {
+        }
+    };
+    void clearFavoritesLayout() {
+        TableLayout table = (TableLayout) findViewById(R.id.favoritesTbl);
+        for(int i = 1; i < table.getChildCount(); i++) // skip faded template
+            table.removeViewAt(i);
+    }
+    void fillFavoritesLayout() {
+        clearFavoritesLayout();
+        TableLayout table = (TableLayout) findViewById(R.id.favoritesTbl);
+        TableRow rowTemplate = (TableRow) table.getChildAt(0);
+        Favorites.Entry[] entries = mSettings.favorites.listEntries();
+// todo The specified child already has a parent.
+        for(Favorites.Entry entry : entries) {
+//            if(!(mSettings.favorites.favoritesOnly && entry.getFavorite())) continue;
+            CheckBox rowFavorite = ((CheckBox)rowTemplate.getChildAt(0));
+            rowFavorite.setChecked(entry.getFavorite());
+            chkRowFavoriteClicked(rowFavorite);
+            ((EditText)rowTemplate.getChildAt(1)).setText(entry.getName());
+            ((TextView)rowTemplate.getChildAt(2)).setText(
+                 entry.getExpiryDate() > 0 ? format("%tR %1$tF", entry.getExpiryDate()) : ""
+            );
+            ((EditText)rowTemplate.getChildAt(3)).setText(entry.getId());
+            table.addView(rowTemplate);
+            setViewVisibility(table.getChildAt(table.getChildCount() -1),true);
+        }
+    }
+
+    public void chkFavoritesClicked(View view) {
+
+    }
+    public void chkRowFavoriteClicked(View view) {
+        TableRow tableRow = (TableRow) view.getParent();
+        tableRow.getChildAt(tableRow.indexOfChild(view)+1).setEnabled(
+                ((CheckBox)view).isChecked()
+        );
     }
 
     void saveSettings(Context context) {
@@ -323,11 +369,11 @@ public class SettingsActivity extends AppActivity
         }
     }
 
-    public void cancelBtnClicked(View v) {
+    public void btnCancelClicked(View v) {
         finish();
     }
 
-    public void exitBtnClicked(View v) {
+    public void btnExitClicked(View v) {
         exitLiteRadar();
     }
 
@@ -336,7 +382,7 @@ public class SettingsActivity extends AppActivity
         finish();
     }
 
-    public void restartBtnClicked(View v) {
+    public void btnRestartClicked(View v) {
         if (fillSettings()) { // returns false on illegal params
             saveSettings(this);
             sendBroadcast(this, new Intent(MainActivity.ACTION_RESTART));

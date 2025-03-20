@@ -14,6 +14,7 @@ public class AppActivity extends Activity {
             @Override
             public void uncaughtException(Thread thread, Throwable throwable) {
                 Context context = getApplicationContext();
+                throwable.printStackTrace();
                 MainActivity.fatal(context, throwable);
             }
         });
