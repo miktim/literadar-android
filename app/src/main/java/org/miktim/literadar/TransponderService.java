@@ -15,6 +15,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
+import android.location.LocationManager;
+import android.net.wifi.WifiManager;
 import android.os.IBinder;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -120,13 +122,13 @@ public class TransponderService extends Service {
     void notifyError(int msgId) {
         if(mError == 0 || mError == msgId) {
             mError = msgId;
-            mNotifier.alert(resString(msgId));
+            mNotifier.alert(getString(msgId));
         }
     }
     void resetError(int msgId) {
         if(mError == msgId) {
             mError = 0;
-            mNotifier.notify(resString(R.string.on_air));
+            mNotifier.notify(getString(R.string.on_air));
         }
     }
     void packetToTracker(Packet packet) throws IOException {
@@ -165,27 +167,30 @@ public class TransponderService extends Service {
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
 
         mLocationProvider = new LocationProvider(MainActivity.mContext, mLocationHandler);
+// https://www.b4x.com/android/forum/threads/solved-android-blocking-receiving-udp-broadcast.99519/
+        WifiManager wifi = (WifiManager) this.getSystemService( Context.WIFI_SERVICE );
+        if(wifi != null){
+            WifiManager.MulticastLock lock = wifi.createMulticastLock("Log_Tag");
+//            if(lock.isHeld())
+                lock.acquire();
+        }
     }
     String notificationTitle() {
         return  format("%s: %s",
-                resString(R.string.app_name),
+                getString(R.string.app_name),
                 getResources().getStringArray(R.array.mode_array)[mSettings.getMode()]);
-    }
-
-    String resString(int resString) {
-        return (getResources().getString(resString));
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        mNotifier.startForeground(resString(R.string.on_air));
+        mNotifier.startForeground(getString(R.string.on_air));
         restartService();
         return START_STICKY;//super.onStartCommand(intent, flags, startId);
     }
 
     public void restartService() {
         try {
-            mOutgoingPacket = new Packet(mSettings.getKeyPair(), mSettings.getDisplayName(), mSettings.getIconId());
+            mOutgoingPacket = new Packet(mSettings.getKeyPair(), mSettings.getName(), mSettings.getIconId());
         } catch (java.security.GeneralSecurityException e) {
             e.printStackTrace();
             stopSelf();
@@ -194,8 +199,9 @@ public class TransponderService extends Service {
             try {
                 InetSocketAddress sa = (InetSocketAddress) mSettings.network.getRemoteSocket(mSettings.mode);
                 mUdpSocket = new UdpSocket(sa.getPort(), sa.getAddress(), mSettings.network.getLocalSocket());
-                if (mSettings.getMode() == Settings.MODE_MULTICAST_MEMBER)
+                if (mSettings.getMode() == Settings.MODE_MULTICAST_MEMBER) {
                     mUdpSocket.receive(mUdpSocketHandler);
+                }
             } catch (IOException e) {
                 e.printStackTrace();
                 stopSelf();

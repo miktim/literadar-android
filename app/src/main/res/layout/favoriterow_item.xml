@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableRow xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    android:isScrollContainer="true">
+
+    <CheckBox
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:onClick="onChkRowFavoriteClick" />
+
+    <EditText
+        android:layout_width="100sp"
+        android:layout_height="wrap_content"
+        android:enabled="false"
+        android:inputType="textPersonName"
+        android:text="alias"
+        android:maxLength="16"
+        android:textSize="15sp" />
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="expiration"
+        android:textSize="15sp" />
+
+    <EditText
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:enabled="false"
+        android:inputType="textPersonName"
+        android:text="tag"
+        android:textSize="15sp" />
+
+
+</TableRow>

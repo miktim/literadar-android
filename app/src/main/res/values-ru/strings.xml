@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="keyFmt">Ключ подписи: %s bit</string>
-    <string name="key_dateFmt">Создан: %s</string>
+    <string name="key_dateFmt">Создан: %tF</string>
     <string name="aliasLbl">Псевдоним: </string>
     <string name="all_interfaces">Все доступные</string>
     <string name="int_unavailable">/недоступен</string>
@@ -18,16 +18,17 @@
     <string name="cancelLbl">Отмена</string>
     <string name="restartLbl">Сохранить</string>
     <string name="err_wrong_address">Пропущен или неверный адрес!</string>
-    <string name="required_address">"Требуется: ipaddress:port "</string>
+    <string name="required_address">Требуется IP address[:port ] !</string>
     <string name="err_settings_title">Ошибка файла настроек.</string>
     <string name="err_settings_msg">Продолжить с текущими настройками.</string>
     <string name="err_geolocation">Геолокация недоступна</string>
     <string name="err_network">Ошибка сети</string>
     <string name="on_air">Коснитесь здесь для вызова LiteRadar</string>
-    <string name="titleFmt">%s %s настройки</string>
-    <string name="section_generalLbl">Основные</string>
+    <string name="titleFmt">%s %s</string>
+    <string name="section_generalLbl">Настройки</string>
     <string name="minTimeLbl">"Интервал геолокации (сек): "</string>
     <string name="section_favoritesLbl">Избранное</string>
     <string name="favorites_onlyLbl">только избранные</string>
+    <string name="toastClipTag">Тег в буфере обмена</string>
 
 </resources>

@@ -26,9 +26,12 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Color;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -46,6 +49,7 @@ import java.text.ParseException;
 public class MainActivity extends AppActivity {
     static final String ACTION_EXIT = "org.literadar.EXIT";
     static final String ACTION_RESTART = "org.literadar.RESTART";
+    static final String SETTINGS_FILENAME = "settings.json";
 
     static Context mContext;
 
@@ -97,6 +101,7 @@ public class MainActivity extends AppActivity {
         sServiceIntent = new Intent(this, TransponderService.class);
         checkPermission(new String[]{
                 Manifest.permission.ACCESS_FINE_LOCATION,
+//                Manifest.permission.CHANGE_WIFI_MULTICAST_STATE,
                 Manifest.permission.POST_NOTIFICATIONS
         }, PERMISSION_GRANTED);
 
@@ -213,6 +218,19 @@ public class MainActivity extends AppActivity {
         showDialog(context, title, msg, "Ok", new DialogAction());
     }
 
+    public static void toastError(Context context, String text) {
+        Toast toast = Toast.makeText(context, text, Toast.LENGTH_LONG);
+        toast.setGravity(Gravity.CENTER_VERTICAL, 0, 0);
+        toast.show();
+        Notifier.beep();
+    }
+
+    public static void toastInfo(Context context, String text) {
+        Toast toast = Toast.makeText(context, text, Toast.LENGTH_SHORT);
+        toast.setGravity(Gravity.CENTER_VERTICAL, 0, 0);
+        toast.show();
+    }
+
     Settings loadSettings(Context context) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
         Settings settings = new Settings();
         File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
@@ -221,16 +239,12 @@ public class MainActivity extends AppActivity {
                 settings.load(fis);
             } catch (IOException | ParseException e) {
                 MainActivity.okDialog(mContext,
-                        resString(R.string.err_settings_title),
-                        resString(R.string.err_settings_msg)
+                        getString(R.string.err_settings_title),
+                        getString(R.string.err_settings_msg)
                         );
             }
         }
         return settings;
-    }
-
-    String resString(int resId) {
-        return (getResources().getString(resId));
     }
 
     static void sendBroadcast(Context context, Intent intent) {

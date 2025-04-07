@@ -8,18 +8,18 @@ package org.miktim.literadar;
 
 import static org.miktim.literadar.MainActivity.okDialog;
 import static org.miktim.literadar.Settings.MODE_UNICAST_CLIENT;
-import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
-
 import static java.lang.String.format;
-
 import android.content.BroadcastReceiver;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.os.Bundle;
+import android.view.LayoutInflater;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
@@ -36,6 +36,8 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.google.android.material.tabs.TabLayout;
 
+import org.miktim.Base64;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -46,9 +48,9 @@ import java.net.SocketException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 
 public class SettingsActivity extends AppActivity
         implements AdapterView.OnItemSelectedListener {
@@ -90,7 +92,8 @@ public class SettingsActivity extends AppActivity
         mTrackerChk = findViewById(R.id.trackerChk);
         mAddressEdt = findViewById(R.id.addressEdt);
         mInterfaceSpn = findViewById(R.id.interfaceSpn);
-        fillLayout();
+        fillGeneralLayout();
+        fillFavoritesLayout();
 
 //        throw new NullPointerException(); // test
     }
@@ -104,33 +107,32 @@ public class SettingsActivity extends AppActivity
 
     Settings loadSettings(Context context) throws NoSuchAlgorithmException, InvalidAlgorithmParameterException {
         Settings settings = null;
-        File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
+        File file = new File(context.getFilesDir(), MainActivity.SETTINGS_FILENAME);
         if (file.exists()) {
             try (FileInputStream fis = new FileInputStream(file)) {
                 settings = new Settings();
                 settings.load(fis);
             } catch (IOException | ParseException e) {
                 okDialog(getApplicationContext(),
-                        resString(R.string.err_settings_title),
-                        resString(R.string.err_settings_msg)
+                        getString(R.string.err_settings_title),
+                        getString(R.string.err_settings_msg)
                 );
             }
         }
         return settings;
     }
 
-    void fillLayout() {
+    void fillGeneralLayout() {
         String version = "";
         try {
             version = this.getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
         } catch (PackageManager.NameNotFoundException ignore) { }
         ((TextView) findViewById(R.id.titleTxt)).setText(
-                format(resString(R.string.titleFmt),resString(R.string.app_name), version));
+                format(getString(R.string.titleFmt),getString(R.string.app_name), version));
         ((TextView) findViewById(R.id.keyTxt)).setText(
-                format(resString(R.string.keyFmt), mSettings.algorithm));
-        ((TextView) findViewById(R.id.keyDateTxt)).setText
-                (format(resString(R.string.key_dateFmt),
-                        new SimpleDateFormat("yyyy-MM-dd").format(mSettings.getKeyTimeStamp())));
+                format(getString(R.string.keyFmt), mSettings.algorithm));
+        ((TextView) findViewById(R.id.keyDateTxt)).setText(
+                format(getString(R.string.key_dateFmt), mSettings.getKeyTimeStamp()));
 
         ((TextView) findViewById(R.id.nameEdt)).setText(mSettings.name);
         String iName = mSettings.network.interfaceName;
@@ -195,16 +197,16 @@ public class SettingsActivity extends AppActivity
 
     String[] getInterfaceList(String iName) {
         ArrayList<String> niList = new ArrayList<>();
-        niList.add(resString(R.string.all_interfaces));
+        niList.add(getString(R.string.all_interfaces));
         try {
             Enumeration<NetworkInterface> niEnum = NetworkInterface.getNetworkInterfaces();
             while (niEnum.hasMoreElements()) {
                 NetworkInterface ni = niEnum.nextElement();
                 String niDn = ni.getDisplayName();
-                InetAddress ia = mSettings.network.getInet4Address(ni);
+                InetAddress ia = Network.getInet4Address(ni);
                 if ((ia != null && !ia.isLoopbackAddress()) || niDn.equals(iName)) {
                     niList.add(niDn +
-                            (ia != null ? ia.toString() : resString(R.string.int_unavailable)));
+                            (ia != null ? ia.toString() : getString(R.string.int_unavailable)));
                 }
             }
         } catch (SocketException e) {
@@ -212,13 +214,36 @@ public class SettingsActivity extends AppActivity
         }
         return niList.toArray((new String[0]));
     }
-
+/*
     String resString(int resString) {
         return (getResources().getString(resString));
     }
+*/
+    public void onBtnCopyTagClick(View v) {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+        try {
+            ClipData clip = ClipData.newPlainText("Tag", mSettings.getTag());
+            clipboard.setPrimaryClip(clip);
+            MainActivity.toastInfo(this, getString(R.string.toastClipTag));
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        }
+    }
 
-    public void btnClipTagClicked(View v) {
-// todo
+    public void onBtnPasteTagClick(View v) {
+        ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        String pasteTag;
+        try {
+            ClipData.Item item = clipboard.getPrimaryClip().getItemAt(0);
+            pasteTag = item.getText().toString();
+            Base64.decode(pasteTag);
+        } catch (Exception e) {
+            Notifier.beep(); // TODO toast
+            return;
+        }
+        Favorites.Entry entry = new Favorites.Entry(pasteTag,Settings.defaultName(pasteTag));
+        mSettings.favorites.updateEntry(entry);
+        mFavoritesTable.updateRow(entry);
     }
 
     @Override
@@ -243,7 +268,7 @@ public class SettingsActivity extends AppActivity
     public void onNothingSelected(AdapterView<?> parent) {
     }
 
-    public void chkTrackerClicked(View v) {
+    public void onChkTrackerShowClick(View v) {
         mSettings.setTrackerEnabled(mTrackerChk.isChecked());
     }
 
@@ -256,10 +281,13 @@ public class SettingsActivity extends AppActivity
                 mSettings.network.setRemoteAddress(
                         address.isEmpty() ? null : address);
         } catch (Exception e) {
-            okDialog(this,
-                    resString(R.string.err_wrong_address),
-                    resString(R.string.required_address));
             mAddressEdt.requestFocus();
+            MainActivity.toastError(this,getString(R.string.err_wrong_address));
+/*
+            okDialog(this,
+                    getString(R.string.err_wrong_address),
+                    getString(R.string.required_address));
+*/
             return false;
         }
 
@@ -267,7 +295,7 @@ public class SettingsActivity extends AppActivity
         mSettings.locations.minTime = checkNumberView(R.id.minTimeEdt, 1);
 //        mSettings.locations.minDistance = checkNumberView(R.id.minDistanceEdt, 0);
 //        mSettings.locations.timeout = checkNumberView(R.id.timeoutEdt,mSettings.locations.minTime * 2);
-
+        fillFavoritesSettings();
         return true;
     }
     int checkNumberView(int viewId, int minValue) {
@@ -292,6 +320,8 @@ public class SettingsActivity extends AppActivity
             view.setVisibility(View.GONE);
         }
     }
+
+// Settings sections
     int[] mSectionIds = new int[] {
             R.id.sectionGeneral,
             R.id.sectionFavorites,
@@ -308,7 +338,6 @@ public class SettingsActivity extends AppActivity
                 return;
             }
             setViewVisibility(sectionRid,true);
-            if(tabPos == 1) fillFavoritesLayout();
         }
 
         @Override
@@ -321,59 +350,136 @@ public class SettingsActivity extends AppActivity
         public void onTabReselected(TabLayout.Tab tab) {
         }
     };
-    void clearFavoritesLayout() {
-        TableLayout table = (TableLayout) findViewById(R.id.favoritesTbl);
-        for(int i = 1; i < table.getChildCount(); i++) // skip faded template
-            table.removeViewAt(i);
-    }
-    void fillFavoritesLayout() {
-        clearFavoritesLayout();
-        TableLayout table = (TableLayout) findViewById(R.id.favoritesTbl);
-        TableRow rowTemplate = (TableRow) table.getChildAt(0);
-        Favorites.Entry[] entries = mSettings.favorites.listEntries();
-// todo The specified child already has a parent.
-        for(Favorites.Entry entry : entries) {
-//            if(!(mSettings.favorites.favoritesOnly && entry.getFavorite())) continue;
-            CheckBox rowFavorite = ((CheckBox)rowTemplate.getChildAt(0));
-            rowFavorite.setChecked(entry.getFavorite());
-            chkRowFavoriteClicked(rowFavorite);
-            ((EditText)rowTemplate.getChildAt(1)).setText(entry.getName());
-            ((TextView)rowTemplate.getChildAt(2)).setText(
-                 entry.getExpiryDate() > 0 ? format("%tR %1$tF", entry.getExpiryDate()) : ""
-            );
-            ((EditText)rowTemplate.getChildAt(3)).setText(entry.getId());
-            table.addView(rowTemplate);
-            setViewVisibility(table.getChildAt(table.getChildCount() -1),true);
+
+// Favorites table layout
+     class FavoritesTable {
+        Context context;
+        HashMap<String, TableRow> rowHashMap = new HashMap<>();
+        TableLayout table;
+        boolean favoritesOnly;
+
+        FavoritesTable(Context context) {
+            this.context = context;
+            table = findViewById(R.id.favoritesTbl);
+            favoritesOnly = mSettings.favorites.favoritesOnly;
+            ((CheckBox)findViewById(R.id.favoritesOnlyChk)).setChecked(favoritesOnly);
+            fill();
+        }
+        TableLayout table() {
+            return table;
+        }
+        int rows() {
+            return table.getChildCount();
+        }
+        TableRow row(int i) {
+            return (TableRow)table.getChildAt(i);
+        }
+        CheckBox getFavorite(TableRow row) {
+            return (CheckBox)row.getChildAt(0);
+        }
+        EditText getName(TableRow row) {
+            return (EditText)row.getChildAt(1);
+        }
+        TextView getExpired(TableRow row) {
+            return (TextView)row.getChildAt(2);
+        }
+        EditText getTag(TableRow row) {
+            return (EditText)row.getChildAt(3);
+        }
+        void fill() {
+            Favorites.Entry[] entries = mSettings.favorites.listEntries();
+            for(Favorites.Entry entry : entries) {
+                addRow(entry);
+            }
+        }
+        void refresh() {
+            for(int i = 1; i < rows(); i++)
+                setRowVisibility(row(i));
+        }
+        void setFavoritesOnly(boolean yes) {
+            favoritesOnly = yes;
+            refresh();
+        }
+        void setRowState(TableRow row) {
+            boolean favorite = getFavorite(row).isChecked();
+            getName(row).setEnabled(favorite);
+            setRowVisibility(row);
+        }
+        void setRowVisibility(TableRow row) {
+            setViewVisibility(row, !favoritesOnly || getFavorite(row).isChecked());
+        }
+        void updateRow(Favorites.Entry entry) {
+            TableRow row = addRow(entry);
+            Rect rectangle=new Rect();
+            row.getDrawingRect(rectangle);
+            row.requestRectangleOnScreen(rectangle);
+//            row.requestRectangleOnScreen(new Rect(0, 0, row.getWidth(), row.getHeight()));
+        }
+        TableRow addRow(Favorites.Entry entry) {
+            TableRow row = rowHashMap.get(entry.getId());
+            if(row == null) {
+// https://stackoverflow.com/questions/38012381/duplicate-a-view-programmatically-from-an-already-existing-view
+                row = (TableRow)LayoutInflater.from(context).inflate(
+                    R.layout.favoriterow_item, null);
+                table.addView(row);
+                rowHashMap.put(entry.getId(), row);
+            }
+            getFavorite(row).setChecked(entry.getFavorite());
+            getName(row).setText(entry.getName());
+            getExpired(row).setText(entry.getExpiryDate() > 0 ?
+                     format("%tR %1$tF", entry.getExpiryDate()) : "");
+            getTag(row).setText(entry.getId());
+            setRowState(row);
+            return row;
+        }
+        void fillSettings() {
+            mSettings.favorites.favoritesOnly = favoritesOnly;
+            for( int i = 1; i < rows(); i++) {
+                TableRow row = row(i);
+//                if(!getFavorite(row).isChecked()) continue;
+                Favorites.Entry entry = new Favorites.Entry(
+                        getTag(row).getText().toString(),
+                        getName(row).getText().toString());
+                entry.setFavorite(getFavorite(row).isChecked());
+                mSettings.favorites.updateEntry(entry);
+            }
         }
     }
 
-    public void chkFavoritesClicked(View view) {
-
+    FavoritesTable mFavoritesTable;
+    void fillFavoritesLayout() {
+        mFavoritesTable = new FavoritesTable(this);
     }
-    public void chkRowFavoriteClicked(View view) {
-        TableRow tableRow = (TableRow) view.getParent();
-        tableRow.getChildAt(tableRow.indexOfChild(view)+1).setEnabled(
-                ((CheckBox)view).isChecked()
-        );
+    void fillFavoritesSettings() {
+        mFavoritesTable.fillSettings();
+    }
+    public void onChkFavoritesOnlyClick(View view) {
+        mFavoritesTable.setFavoritesOnly(((CheckBox)view).isChecked());
+    }
+    public void onChkRowFavoriteClick(View view) {
+        mFavoritesTable.setRowState((TableRow) view.getParent());
     }
 
     void saveSettings(Context context) {
-        File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
+        File file = new File(context.getFilesDir(), MainActivity.SETTINGS_FILENAME);
         try (FileOutputStream fos = new FileOutputStream(file)) {
             mSettings.save(fos);
 //            MainActivity.sSettings = mSettings;
         } catch (Exception e) {
+            MainActivity.toastError(this,getString(R.string.err_settings_title));
+/*
             okDialog(getApplicationContext(),
-                    resString(R.string.err_settings_title),
-                    resString(R.string.err_settings_msg));
+                    getString(R.string.err_settings_title),
+                    getString(R.string.err_settings_msg));
+*/
         }
     }
 
-    public void btnCancelClicked(View v) {
+    public void onBtnCancelClick(View v) {
         finish();
     }
 
-    public void btnExitClicked(View v) {
+    public void onBtnExitClick(View v) {
         exitLiteRadar();
     }
 
@@ -382,7 +488,7 @@ public class SettingsActivity extends AppActivity
         finish();
     }
 
-    public void btnRestartClicked(View v) {
+    public void onBtnRestartClick(View v) {
         if (fillSettings()) { // returns false on illegal params
             saveSettings(this);
             sendBroadcast(this, new Intent(MainActivity.ACTION_RESTART));

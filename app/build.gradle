@@ -10,8 +10,8 @@ android {
         minSdk 21
         targetSdk 33
 //        targetSdk 29
-        versionCode 7
-        versionName "1.0.3"
+        versionCode 8
+        versionName "1.0.4"
         setProperty("archivesBaseName", "literadar-$versionName")
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
