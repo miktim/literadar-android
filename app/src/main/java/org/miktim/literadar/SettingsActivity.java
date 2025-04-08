@@ -214,11 +214,7 @@ public class SettingsActivity extends AppActivity
         }
         return niList.toArray((new String[0]));
     }
-/*
-    String resString(int resString) {
-        return (getResources().getString(resString));
-    }
-*/
+
     public void onBtnCopyTagClick(View v) {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         try {
@@ -241,9 +237,7 @@ public class SettingsActivity extends AppActivity
             Notifier.beep(); // TODO toast
             return;
         }
-        Favorites.Entry entry = new Favorites.Entry(pasteTag,Settings.defaultName(pasteTag));
-        mSettings.favorites.updateEntry(entry);
-        mFavoritesTable.updateRow(entry);
+        mFavoritesTable.updateRow(pasteTag);
     }
 
     @Override
@@ -408,7 +402,15 @@ public class SettingsActivity extends AppActivity
         void setRowVisibility(TableRow row) {
             setViewVisibility(row, !favoritesOnly || getFavorite(row).isChecked());
         }
-        void updateRow(Favorites.Entry entry) {
+        void updateRow(String tag) {
+            Favorites.Entry entry = mSettings.favorites.getEntry(tag);
+            if(entry != null) {
+                entry.setFavorite(true);
+            } else {
+                entry = new Favorites.Entry(tag, Settings.defaultName(tag));
+                mSettings.favorites.updateEntry(entry);
+            }
+
             TableRow row = addRow(entry);
             Rect rectangle=new Rect();
             row.getDrawingRect(rectangle);

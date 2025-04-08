@@ -27,8 +27,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Color;
+import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.TextView;
@@ -83,6 +85,9 @@ public class MainActivity extends AppActivity {
 //        this.getTheme().applyStyle(R.style.AppTheme_Invisible, true);
 //        ActivityCompat.recreate(this);
 
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+
         mContext = getApplicationContext();
 
         mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
@@ -111,11 +116,12 @@ public class MainActivity extends AppActivity {
     public void finish() {
         super.finish();
         closeTrackerActivity();
-        mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
     }
 
     @Override
     protected void onDestroy() {
+        wifiRelease();
+        mLocalBroadcastManager.unregisterReceiver(mBroadcastReceiver);
         super.onDestroy();
         exit(0);
     }
@@ -128,13 +134,13 @@ public class MainActivity extends AppActivity {
                 finish();
 //                self.uncaughtException(Thread.currentThread(), t);
             }
-
+            wifiAcquire();
 // todo ???map not showing samsung
             startTrackerActivity();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 startForegroundService(sServiceIntent);
             } else {
-                 startService(sServiceIntent);
+                startService(sServiceIntent);
             }
             startActivity(sSettingsIntent);
         }
@@ -185,6 +191,25 @@ public class MainActivity extends AppActivity {
         } else {
             finish();
         }
+    }
+
+// WiFi
+    static String sWifiTAG = "TAG";
+    WifiManager.WifiLock mWifiLock;
+    WifiManager.MulticastLock mCastLock;
+    void wifiAcquire() {
+// https://www.b4x.com/android/forum/threads/solved-android-blocking-receiving-udp-broadcast.99519/
+        WifiManager wifi = (WifiManager) getApplicationContext().getSystemService( Context.WIFI_SERVICE );
+        if(wifi != null){
+            mWifiLock = wifi.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF,sWifiTAG);
+            mWifiLock.acquire();
+            mCastLock = wifi.createMulticastLock(sWifiTAG);
+            mCastLock.acquire();
+        }
+    }
+    void wifiRelease() {
+        if (mWifiLock != null) mWifiLock.release();
+        if(mCastLock != null) mCastLock.release();
     }
 
     public static class DialogAction {

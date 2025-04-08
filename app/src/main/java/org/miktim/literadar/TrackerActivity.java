@@ -99,12 +99,6 @@ public class TrackerActivity extends AppActivity {
         mWebView.loadUrl(url);
     }
 
-
-
-    String resString(int resString) {
-        return (getResources().getString(resString));
-    }
-
     public class FromTracker {
         Context mContext;
 

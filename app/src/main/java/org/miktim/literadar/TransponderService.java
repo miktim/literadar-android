@@ -26,6 +26,7 @@ import org.miktim.udpsocket.UdpSocket;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
+import java.net.MulticastSocket;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
 
@@ -39,9 +40,12 @@ public class TransponderService extends Service {
         @Override
         public void onLocationChanged(Location location) {
             resetError(R.string.err_geolocation);
-            if (location == null) return;
+            location = mLocationProvider.getLastLocation();
+            if (location == null) {
+                return;
+            };
             mOutgoingPacket.updateLocation(
-                    location.getTime(),
+                    System.currentTimeMillis(),//location.getTime(),
                     mSettings.locations.getMinTime() * 2,
                     location.getLatitude(),
                     location.getLongitude(),
@@ -98,7 +102,10 @@ public class TransponderService extends Service {
                 Packet incomingPacket = new Packet();
                 incomingPacket.unpack(Arrays.copyOf(datagramPacket.getData(), datagramPacket.getLength()));
                 Favorites.Entry entry = mSettings.favorites.updateEntry(incomingPacket);
-                incomingPacket.iconid = entry.getFavorite() ? 1 : 0; // green : gray
+                incomingPacket.name = entry.getName();
+                boolean isFavorite = entry.getFavorite();
+                incomingPacket.iconid = isFavorite ? 1 : 0; // green : gray
+                if(!isFavorite && mSettings.favorites.favoritesOnly) return;
                 packetToTracker(incomingPacket);
             } catch (IOException e) {
                 notifyError(R.string.err_network);
@@ -167,14 +174,8 @@ public class TransponderService extends Service {
         mLocalBroadcastManager.registerReceiver(mBroadcastReceiver, intentFilter);
 
         mLocationProvider = new LocationProvider(MainActivity.mContext, mLocationHandler);
-// https://www.b4x.com/android/forum/threads/solved-android-blocking-receiving-udp-broadcast.99519/
-        WifiManager wifi = (WifiManager) this.getSystemService( Context.WIFI_SERVICE );
-        if(wifi != null){
-            WifiManager.MulticastLock lock = wifi.createMulticastLock("Log_Tag");
-//            if(lock.isHeld())
-                lock.acquire();
-        }
     }
+
     String notificationTitle() {
         return  format("%s: %s",
                 getString(R.string.app_name),
@@ -193,18 +194,21 @@ public class TransponderService extends Service {
             mOutgoingPacket = new Packet(mSettings.getKeyPair(), mSettings.getName(), mSettings.getIconId());
         } catch (java.security.GeneralSecurityException e) {
             e.printStackTrace();
-            stopSelf();
+            MainActivity.fatal(this,e);
         }
         if (mSettings.getMode() != Settings.MODE_TRACKER_ONLY) {
             try {
-                InetSocketAddress sa = (InetSocketAddress) mSettings.network.getRemoteSocket(mSettings.mode);
-                mUdpSocket = new UdpSocket(sa.getPort(), sa.getAddress(), mSettings.network.getLocalSocket());
+                InetSocketAddress rsa = (InetSocketAddress) mSettings.network.getRemoteSocket(mSettings.mode);
+                mUdpSocket = new UdpSocket(rsa.getPort(), rsa.getAddress(), mSettings.network.getLocalSocket());
                 if (mSettings.getMode() == Settings.MODE_MULTICAST_MEMBER) {
                     mUdpSocket.receive(mUdpSocketHandler);
                 }
+//                if(rsa.getAddress().isMulticastAddress()) {
+//                    ((MulticastSocket)mUdpSocket.getDatagramSocket()).setTimeToLive(mSettings.network.timeToLive);
+//                }
             } catch (IOException e) {
                 e.printStackTrace();
-                stopSelf();
+                MainActivity.fatal(this, e);
             }
         }
         // todo: too small minTime = 5 sec
