@@ -15,6 +15,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Rect;
 import android.os.Bundle;
@@ -125,7 +126,8 @@ public class SettingsActivity extends AppActivity
     void fillGeneralLayout() {
         String version = "";
         try {
-            version = this.getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            PackageInfo pInfo = this.getPackageManager().getPackageInfo(getPackageName(), 0);
+            version = format("%s.%s",pInfo.versionName, pInfo.versionCode);
         } catch (PackageManager.NameNotFoundException ignore) { }
         ((TextView) findViewById(R.id.titleTxt)).setText(
                 format(getString(R.string.titleFmt),getString(R.string.app_name), version));

@@ -24,7 +24,7 @@
     <string name="err_settings_msg">Сontinue with the current settings.</string>
     <string name="err_geolocation">Geolocation unavailable</string>
     <string name="err_network">Network error</string>
-    <string name="on_air">Tap here to show the LiteRadar</string>
+    <string name="on_air">Tap here to show the control panel</string>
     <string name="section_generalLbl">Settings</string>
     <string name="favorites_onlyLbl">favorites only</string>
     <string name="minTimeLbl">"Geolocation interval (sec): "</string>

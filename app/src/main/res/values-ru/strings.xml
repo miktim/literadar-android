@@ -23,7 +23,7 @@
     <string name="err_settings_msg">Продолжить с текущими настройками.</string>
     <string name="err_geolocation">Геолокация недоступна</string>
     <string name="err_network">Ошибка сети</string>
-    <string name="on_air">Коснитесь здесь для вызова LiteRadar</string>
+    <string name="on_air">Коснитесь для вызова панели управления</string>
     <string name="titleFmt">%s %s</string>
     <string name="section_generalLbl">Настройки</string>
     <string name="minTimeLbl">"Интервал геолокации (сек): "</string>
