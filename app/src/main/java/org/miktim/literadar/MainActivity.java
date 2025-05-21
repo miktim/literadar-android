@@ -109,6 +109,7 @@ public class MainActivity extends AppActivity {
 //                Manifest.permission.CHANGE_WIFI_MULTICAST_STATE,
                 Manifest.permission.POST_NOTIFICATIONS
         }, PERMISSION_GRANTED);
+        wifiAcquire();
 
     }
 
@@ -129,12 +130,13 @@ public class MainActivity extends AppActivity {
     void permissionsGranted() {
         if (sSettings == null) {
             try {
+                sSettings = new Settings(); // todo
                 sSettings = loadSettings(getBaseContext());
             } catch (Throwable t) {
-                finish();
+                toastError(getBaseContext(),getString(R.string.err_settings_title));
+//                finish();
 //                self.uncaughtException(Thread.currentThread(), t);
             }
-            wifiAcquire();
 // todo ???map not showing samsung
             startTrackerActivity();
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -260,13 +262,17 @@ public class MainActivity extends AppActivity {
         Settings settings = new Settings();
         File file = new File(context.getFilesDir(), SETTINGS_FILENAME);
         if (file.exists()) {
-            try (FileInputStream fis = new FileInputStream(file)) {
+            try (FileInputStream fis = context.openFileInput(SETTINGS_FILENAME)) {
+//            try (FileInputStream fis = new FileInputStream(file)) {
                 settings.load(fis);
             } catch (IOException | ParseException e) {
+                toastError(context, getString(R.string.err_settings_title));
+/*
                 MainActivity.okDialog(mContext,
                         getString(R.string.err_settings_title),
                         getString(R.string.err_settings_msg)
                         );
+*/
             }
         }
         return settings;

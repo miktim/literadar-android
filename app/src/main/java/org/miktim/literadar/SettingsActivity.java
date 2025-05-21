@@ -110,7 +110,8 @@ public class SettingsActivity extends AppActivity
         Settings settings = null;
         File file = new File(context.getFilesDir(), MainActivity.SETTINGS_FILENAME);
         if (file.exists()) {
-            try (FileInputStream fis = new FileInputStream(file)) {
+            try (FileInputStream fis = context.openFileInput(MainActivity.SETTINGS_FILENAME)) {
+//                try (FileInputStream fis = new FileInputStream(file)) {
                 settings = new Settings();
                 settings.load(fis);
             } catch (IOException | ParseException e) {
@@ -465,10 +466,11 @@ public class SettingsActivity extends AppActivity
     }
 
     void saveSettings(Context context) {
-        File file = new File(context.getFilesDir(), MainActivity.SETTINGS_FILENAME);
-        try (FileOutputStream fos = new FileOutputStream(file)) {
+//        File file = new File(context.getFilesDir(), MainActivity.SETTINGS_FILENAME);
+        try (FileOutputStream fos = context.openFileOutput(
+                MainActivity.SETTINGS_FILENAME, Context.MODE_PRIVATE)) {
+//        try (FileOutputStream fos = new FileOutputStream(file)) {
             mSettings.save(fos);
-//            MainActivity.sSettings = mSettings;
         } catch (Exception e) {
             MainActivity.toastError(this,getString(R.string.err_settings_title));
 /*

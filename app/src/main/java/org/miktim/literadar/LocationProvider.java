@@ -16,6 +16,8 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.util.Log;
 
+import androidx.core.location.LocationListenerCompat;
+
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -66,7 +68,12 @@ public class LocationProvider {
         return mLastLocation;
     }
     public boolean isOutOfService() {
-        return mEnabledProviders == 0;
+        if(mListeners == null) return true;
+        for (ProviderListener listener : mListeners) {
+            if(listener.isEnabled()) return false;
+        }
+        return true;
+//        return mEnabledProviders == 0;
     }
 
     @SuppressLint("MissingPermission")
@@ -84,10 +91,11 @@ public class LocationProvider {
     }
 
     public void disconnect() {
-        if (mLocationManager == null) return; // not connected
+        if (mLocationManager == null || mListeners == null) return; // not connected
         for (ProviderListener listener : mListeners) {
             listener.disconnectListener();
         }
+
 //        mLocationManager = null;
         if (mTimer != null)
             try { mTimer.cancel(); } catch (Exception ignore) {}
@@ -102,7 +110,8 @@ public class LocationProvider {
             Log.d("LocationProvider",
                     format("%s %TT", mLastLocation.getProvider(),new Date(mLastLocation.getTime())));
         } else {
-            if (mEnabledProviders == 0) {
+//            if (mEnabledProviders == 0) {
+            if (isOutOfService()) {
                  mHandler.onOutOfLocationService();
             } else {
                 mHandler.onLocationChanged(null);
@@ -111,7 +120,7 @@ public class LocationProvider {
         renewLocation();
     }
 
-    private class ProviderListener implements LocationListener {
+    private class ProviderListener implements LocationListenerCompat {
         String mProviderName;
         Boolean mConnected = false;
 

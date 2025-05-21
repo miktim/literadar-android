@@ -11,9 +11,9 @@
       "type": "SINGLE",
       "filters": [],
       "attributes": [],
-      "versionCode": 15,
+      "versionCode": 16,
       "versionName": "1.0",
-      "outputFile": "literadar-1.0.15-release.apk"
+      "outputFile": "literadar-1.0.16-release.apk"
     }
   ],
   "elementType": "File"

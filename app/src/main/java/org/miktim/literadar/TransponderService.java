@@ -127,10 +127,10 @@ public class TransponderService extends Service {
     };
     int mError;
     void notifyError(int msgId) {
-        if(mError == 0 || mError == msgId) {
+        if(mError == 0) {// || mError == msgId) {
             mError = msgId;
             mNotifier.alert(getString(msgId));
-        }
+        } else Notifier.beep();
     }
     void resetError(int msgId) {
         if(mError == msgId) {
