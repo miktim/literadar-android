@@ -13,14 +13,14 @@ Screen resolution 800x480 and higher.
 Network features may be limited by your cellular provider's policies or Android device capabilities.  
 
 ### General information  
+The transponder identifier for data transmission over the network is the public key of the asymmetric encryption algorithm. The authenticity of the data packet is confirmed by a digital signature.  
+The tag, an abbreviated version of the public key, is used to exchange the identifier between users.  
+The optional name (alias) of the transponder has an auxiliary meaning.  
+
 Application components:  
 \- [transponder](https://en.wikipedia.org/wiki/Automatic_Dependent_Surveillance%E2%80%93Broadcast) - background high-priority service for determining location and exchanging data;  
 \- tracker for displaying objects on a map;  
 \- control panel.  
-
-The transponder identifier for data transmission over the network is the public key of the asymmetric encryption algorithm. The authenticity of the data packet is confirmed by a digital signature.  
-The tag, an abbreviated version of the public key, is used to exchange the identifier between users.  
-The optional name (alias) of the transponder has an auxiliary meaning.  
  
 ### Notifications  
 <img

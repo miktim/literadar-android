@@ -18,8 +18,8 @@
     <string name="cancelLbl">Отмена</string>
     <string name="restartLbl">Сохранить</string>
     <string name="err_wrong_address">Пропущен или неверный адрес!</string>
-    <string name="required_address">Требуется IP address[:port ] !</string>
-    <string name="err_settings_title">Ошибка файла настроек.</string>
+    <string name="err_address_required">Требуется IP address:port  !</string>
+    <string name="err_settings_read">Ошибка чтения настроек.</string>
     <string name="err_settings_msg">Продолжить с текущими настройками.</string>
     <string name="err_geolocation">Геолокация недоступна</string>
     <string name="err_network">Ошибка сети</string>
@@ -30,5 +30,6 @@
     <string name="section_favoritesLbl">Избранное</string>
     <string name="favorites_onlyLbl">только избранные</string>
     <string name="toastClipTag">Тег в буфере обмена</string>
+    <string name="err_settings_write">Ошибка записи настроек.</string>
 
 </resources>

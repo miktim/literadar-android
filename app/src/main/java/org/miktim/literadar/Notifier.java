@@ -6,23 +6,21 @@
  *   mNotifier = new Notifier(this, R.mipmap.ic_launcher, "My title");
  *   mNotifier.notify("...some message");
  *   ...
- *   mNotifier.notify("...another message");
+ *   mNotifier.alert("...another message"); // notify with beep
  *   ...
  *   mNotifier.cancel();
  *
  * Usage in the Android foreground service:
  *   mNotifier = new Notifier(this, R.mipmap.ic_stat_notify, "My title");
  *   mNotifier.setActivity(MyActivity.class);
- * // WARNING: the corresponding IMPORTANCE_ used but not tested
- *   mNotifier.setPriority(Notifier.PRIORITY_LOW);
  *   mNotifier.notify("Service started");
  *   startForeground(mNotifier.getNotificationId(), mNotifier.getNotification());
  *   ...
- *   mNotifier.alert("...something is wrong");
+ *   mNotifier.alert("...something is wrong"); // notify with beep
  *   ...
- *   mNotifier.clearActivity();
  *   mNotifier.notify("Service stopped");
- *   stopForeground(false);
+ *   ...
+ *   stopForeground(true);
  * // cancel the notification in any way
  *
  * Created: 2019-03-15
@@ -95,18 +93,7 @@ public class Notifier {
         }
         return builder;
     }
-/*
-    public NotificationCompat.Builder getNotificationBuilder(Context context, String channelId, int importance) {
-        NotificationCompat.Builder builder;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            prepareChannel(context, channelId, importance);
-            builder = new NotificationCompat.Builder(context, channelId);
-        } else {
-            builder = new NotificationCompat.Builder(context);
-        }
-        return builder;
-    }
-*/
+
     NotificationChannel mChannel = null;
     @TargetApi(26)
     private void prepareChannel(Context context, String id, int priority) {
@@ -119,9 +106,6 @@ public class Notifier {
         };
         String appName = context.getString(R.string.app_name);
         String description = appName + " notification channel";//context.getString(R.string.notifications_channel_description);
-
- //       if(mManager != null) {
- //           NotificationChannel nChannel = mManager.getNotificationChannel(id);
 
             if (mChannel == null) {
                 mChannel = new NotificationChannel(id, appName, IMPORTANCE[priority]);
@@ -142,6 +126,11 @@ public class Notifier {
         mPendingIntent = PendingIntent.getActivity(
                 mContext, 0, activityIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        return mPendingIntent;
+    }
+
+    public PendingIntent setActivity(PendingIntent activityPendingIntent) {
+        mPendingIntent = activityPendingIntent;
         return mPendingIntent;
     }
 
@@ -177,27 +166,21 @@ public class Notifier {
 // https://stackoverflow.com/questions/29509010/how-to-play-a-short-beep-to-android-phones-loudspeaker-programmatically
 // See also:
 // https://stackoverflow.com/questions/11964623/audioflinger-could-not-create-track-status-12
-//        ToneGenerator toneGen1 = new ToneGenerator(AudioManager.STREAM_MUSIC, 75);
-//        toneGen1.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT,100);
         playTone(AudioManager.STREAM_NOTIFICATION, ALERT_BEEP_VOLUME
                 ,ToneGenerator.TONE_CDMA_ABBR_ALERT,100);
         notify(text);
     }
 
-    // https://developer.android.com/training/notify-user/build-notification.html#Removing
+// https://developer.android.com/training/notify-user/build-notification.html#Removing
     public void cancel() {
         mManager.cancel(mNotificationId);
     }
 
     public String getChannelId() { return mChannelId; }
     public int getNotificationId() { return mNotificationId; }
-//    public NotificationCompat.Builder getBuilder() { return mBuilder; }
     public NotificationManager getManager() {
         return mManager;
     }
-
-// returns NULL or LAST SHOWN notification
-//    public Notification getNotification() { return mNotification;  }
 
     public void clearActivity() {
         mPendingIntent = null;

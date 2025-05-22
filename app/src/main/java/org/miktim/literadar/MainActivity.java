@@ -13,8 +13,6 @@ package org.miktim.literadar;
 
 import static android.content.pm.PackageManager.PERMISSION_DENIED;
 
-import static org.miktim.literadar.Settings.SETTINGS_FILENAME;
-
 import static java.lang.String.format;
 import static java.lang.System.exit;
 import static java.lang.Thread.sleep;
@@ -26,14 +24,12 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.graphics.Color;
 import android.net.wifi.WifiManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.StrictMode;
 import android.view.Gravity;
 import android.view.View;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.core.app.ActivityCompat;
@@ -133,7 +129,7 @@ public class MainActivity extends AppActivity {
                 sSettings = new Settings(); // todo
                 sSettings = loadSettings(getBaseContext());
             } catch (Throwable t) {
-                toastError(getBaseContext(),getString(R.string.err_settings_title));
+                toastError(getBaseContext(),getString(R.string.err_settings_read));
 //                finish();
 //                self.uncaughtException(Thread.currentThread(), t);
             }
@@ -149,10 +145,10 @@ public class MainActivity extends AppActivity {
     }
 
     void startTrackerActivity() {
-        if (sSettings.showTracker && !sTrackerStarted) {
+        if (sSettings.getTrackerEnabled() && !sTrackerStarted) {
             sTrackerIntent.putExtra("url", sSettings.getTrackerURL());
             startActivity(sTrackerIntent);
-        } else if (!sSettings.showTracker)
+        } else if (!sSettings.getTrackerEnabled())
             closeTrackerActivity();
     }
 
@@ -266,7 +262,7 @@ public class MainActivity extends AppActivity {
 //            try (FileInputStream fis = new FileInputStream(file)) {
                 settings.load(fis);
             } catch (IOException | ParseException e) {
-                toastError(context, getString(R.string.err_settings_title));
+                toastError(context, getString(R.string.err_settings_read));
 /*
                 MainActivity.okDialog(mContext,
                         getString(R.string.err_settings_title),

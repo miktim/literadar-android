@@ -15,8 +15,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.location.Location;
-import android.location.LocationManager;
-import android.net.wifi.WifiManager;
 import android.os.IBinder;
 
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -43,7 +41,7 @@ public class TransponderService extends Service {
             location = mLocationProvider.getLastLocation();
             if (location == null) {
                 return;
-            };
+            }
             mOutgoingPacket.updateLocation(
                     System.currentTimeMillis(),//location.getTime(),
                     mSettings.locations.getMinTime() * 2,
@@ -139,7 +137,7 @@ public class TransponderService extends Service {
         }
     }
     void packetToTracker(Packet packet) throws IOException {
-        if (mSettings.showTracker) {
+        if (mSettings.getTrackerEnabled()) {
             String json = packet.toJSON();
             Intent intent = new Intent(TrackerActivity.TRACKER_ACTION);
             intent.putExtra(TrackerActivity.TRACKER_EXTRA, json);
@@ -196,16 +194,19 @@ public class TransponderService extends Service {
             e.printStackTrace();
             MainActivity.fatal(this,e);
         }
-        if (mSettings.getMode() != Settings.MODE_TRACKER_ONLY) {
+        int mode = mSettings.getMode();
+        if (mode != Settings.MODE_TRACKER_ONLY) {
             try {
-                InetSocketAddress rsa = (InetSocketAddress) mSettings.network.getRemoteSocket(mSettings.mode);
-                mUdpSocket = new UdpSocket(rsa.getPort(), rsa.getAddress(), mSettings.network.getLocalSocket());
-                if (mSettings.getMode() == Settings.MODE_MULTICAST_MEMBER) {
+                InetSocketAddress rsa = (InetSocketAddress) mSettings.network.getRemoteSocket(mode);
+                InetSocketAddress lsa = (InetSocketAddress) mSettings.network.getLocalSocket(mode);
+                mUdpSocket = new UdpSocket(rsa.getPort(), rsa.getAddress(), lsa);
+                mUdpSocket.setReuseAddress(true);
+                if(rsa.getAddress().isMulticastAddress()) {
+                    ((MulticastSocket)mUdpSocket.getDatagramSocket()).setTimeToLive(mSettings.network.getTimeToLive());
+                }
+                if (mode == Settings.MODE_MULTICAST_MEMBER) {
                     mUdpSocket.receive(mUdpSocketHandler);
                 }
-//                if(rsa.getAddress().isMulticastAddress()) {
-//                    ((MulticastSocket)mUdpSocket.getDatagramSocket()).setTimeToLive(mSettings.network.timeToLive);
-//                }
             } catch (IOException e) {
                 e.printStackTrace();
                 MainActivity.fatal(this, e);
@@ -213,8 +214,8 @@ public class TransponderService extends Service {
         }
         // todo: too small minTime = 5 sec
         mLocationProvider.connect(
-                mSettings.locations.getMinTime() * 1000L, 1F);
-//                mSettings.locations.getMinDistance());
+                mSettings.locations.getMinTime() * 1000L,
+                mSettings.locations.getMinDistance());
         mNotifier.notifyTitle(notificationTitle());
     }
 

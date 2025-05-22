@@ -82,7 +82,7 @@ public class LocationProvider {
         disconnect();
 
         for (ProviderListener listener : mListeners) {
-            listener.connectListener(minTime-97, minDistance);//todo
+            listener.connectListener(minTime-100, minDistance);//todo
         }
         renewLocation();
         mTimer = new Timer();
@@ -106,18 +106,17 @@ public class LocationProvider {
 //            synchronized(mLocation) {
                 mLastLocation = mLocation;
 //            }
+            renewLocation();
             mHandler.onLocationChanged(mLastLocation);
             Log.d("LocationProvider",
                     format("%s %TT", mLastLocation.getProvider(),new Date(mLastLocation.getTime())));
         } else {
-//            if (mEnabledProviders == 0) {
             if (isOutOfService()) {
                  mHandler.onOutOfLocationService();
             } else {
                 mHandler.onLocationChanged(null);
             }
         }
-        renewLocation();
     }
 
     private class ProviderListener implements LocationListenerCompat {

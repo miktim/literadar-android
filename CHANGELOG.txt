@@ -1,3 +1,7 @@
+1.0.17
+- set multicast time-to-live from settings (service)
+- changed toast messages
+- shared lib changed (1.0.9)
 1.0.16
 - load/save settings changed (Main, Settings activities)
 - notify about error only once, than beeps (service)

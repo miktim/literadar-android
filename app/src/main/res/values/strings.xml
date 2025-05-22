@@ -19,8 +19,9 @@
     <string name="cancelLbl">Cancel</string>
     <string name="restartLbl">Save &amp; Restart</string>
     <string name="err_wrong_address">Wrong or missed address!</string>
-    <string name="required_address">"IP address[:port] required! "</string>
-    <string name="err_settings_title">Settings file error.</string>
+    <string name="err_address_required">"IP address:port required! "</string>
+    <string name="err_settings_read">Settings file read error.</string>
+    <string name="err_settings_write">Settings file write error.</string>
     <string name="err_settings_msg">Сontinue with the current settings.</string>
     <string name="err_geolocation">Geolocation unavailable</string>
     <string name="err_network">Network error</string>

@@ -116,7 +116,7 @@ public class SettingsActivity extends AppActivity
                 settings.load(fis);
             } catch (IOException | ParseException e) {
                 okDialog(getApplicationContext(),
-                        getString(R.string.err_settings_title),
+                        getString(R.string.err_settings_read),
                         getString(R.string.err_settings_msg)
                 );
             }
@@ -133,17 +133,17 @@ public class SettingsActivity extends AppActivity
         ((TextView) findViewById(R.id.titleTxt)).setText(
                 format(getString(R.string.titleFmt),getString(R.string.app_name), version));
         ((TextView) findViewById(R.id.keyTxt)).setText(
-                format(getString(R.string.keyFmt), mSettings.algorithm));
+                format(getString(R.string.keyFmt), mSettings.getAlgorithm()));
         ((TextView) findViewById(R.id.keyDateTxt)).setText(
                 format(getString(R.string.key_dateFmt), mSettings.getKeyTimeStamp()));
 
-        ((TextView) findViewById(R.id.nameEdt)).setText(mSettings.name);
-        String iName = mSettings.network.interfaceName;
+        ((TextView) findViewById(R.id.nameEdt)).setText(mSettings.getName());
+        String iName = mSettings.network.getInterfaceName();
         mInterfaceArray = getInterfaceList(iName);
         initDropdownList(mInterfaceSpn, mInterfaceArray,
                 getListIndex(mInterfaceArray, iName));
-        initDropdownList(findViewById(R.id.modeSpn), getResources().getStringArray(R.array.mode_array), mSettings.mode);
-        modeDependedSettings(mSettings.mode); // sets address, tracker enabled
+        initDropdownList(findViewById(R.id.modeSpn), getResources().getStringArray(R.array.mode_array), mSettings.getMode());
+        modeDependedSettings(mSettings.getMode()); // sets address, tracker enabled
 
         // Geolocation
         ((TextView) findViewById(R.id.minTimeEdt)).setText(
@@ -249,8 +249,8 @@ public class SettingsActivity extends AppActivity
         int spinnerId = parent.getId();
         if(spinnerId == R.id.modeSpn) {
             modeDependedSettings(position);
-            mSettings.mode = position;
-            if(position == Settings.MODE_TRACKER_ONLY) mSettings.showTracker = true;
+            mSettings.setMode(position);
+            if(position == Settings.MODE_TRACKER_ONLY) mSettings.setTrackerEnabled(true);
         } else if(spinnerId == R.id.interfaceSpn) {
             try {
                 mSettings.network.setInterface(
@@ -271,15 +271,15 @@ public class SettingsActivity extends AppActivity
 
     boolean fillSettings() {
         String name = ((TextView) findViewById(R.id.nameEdt)).getText().toString();
-        mSettings.name = name.substring(0, Math.min(name.length(), 16));
+        mSettings.setName(name);
         String address = mAddressEdt.getText().toString();
         try {
             if (mSettings.getMode() == MODE_UNICAST_CLIENT)
-                mSettings.network.setRemoteAddress(
+                mSettings.network.setAddress(mSettings.getMode(),
                         address.isEmpty() ? null : address);
         } catch (Exception e) {
             mAddressEdt.requestFocus();
-            MainActivity.toastError(this,getString(R.string.err_wrong_address));
+            MainActivity.toastError(this,getString(R.string.err_address_required));
 /*
             okDialog(this,
                     getString(R.string.err_wrong_address),
@@ -289,14 +289,14 @@ public class SettingsActivity extends AppActivity
         }
 
         // Geolocation
-        mSettings.locations.minTime = checkNumberView(R.id.minTimeEdt, 1);
+        mSettings.locations.setMinTime(checkNumberView(R.id.minTimeEdt, 1));
 //        mSettings.locations.minDistance = checkNumberView(R.id.minDistanceEdt, 0);
 //        mSettings.locations.timeout = checkNumberView(R.id.timeoutEdt,mSettings.locations.minTime * 2);
         fillFavoritesSettings();
         return true;
     }
     int checkNumberView(int viewId, int minValue) {
-        TextView view = ((TextView) findViewById(viewId));
+        TextView view = findViewById(viewId);
         String s = view.getText().toString();
         if(s.isEmpty() || Integer.parseInt(s) < minValue) {
             view.setText(String.valueOf(minValue));
@@ -472,10 +472,10 @@ public class SettingsActivity extends AppActivity
 //        try (FileOutputStream fos = new FileOutputStream(file)) {
             mSettings.save(fos);
         } catch (Exception e) {
-            MainActivity.toastError(this,getString(R.string.err_settings_title));
+            MainActivity.toastError(this, getString(R.string.err_settings_write));
 /*
             okDialog(getApplicationContext(),
-                    getString(R.string.err_settings_title),
+                    getString(R.string.err_settings_write),
                     getString(R.string.err_settings_msg));
 */
         }
