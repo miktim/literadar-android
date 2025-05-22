@@ -1,7 +1,7 @@
-## LiteRadar Android transponder, MIT (c) 2022-2025 @miktim [RU](./README-RU.md)
+## LiteRadar Android transponder, MIT (c) 2022-2025 @miktim [ru](./README-RU.md)
 
 ### Purpose
-Exchange in a group or transfer to the server of your GNSS location via UDP protocol.  
+Sharing in a group or transmitting your own location to the server via UDP protocol.  
 
 Latest .apk build here: [./app/release/](./app/release/)  
 
@@ -10,7 +10,7 @@ Android 6+
 Screen resolution 800x480 and higher.  
 
 ### Restrictions  
-Network features may be limited by your cellular provider's policies and Android device capabilities.  
+Network features may be limited by your cellular provider's policies or Android device capabilities.  
 
 ### General information  
 Application components:  
