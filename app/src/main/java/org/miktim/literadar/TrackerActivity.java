@@ -51,7 +51,7 @@ public class TrackerActivity extends AppActivity {
     };
 
     @SuppressLint("SetJavaScriptEnabled")
-    @Override
+
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_tracker);
@@ -94,7 +94,7 @@ public class TrackerActivity extends AppActivity {
         });
 
 // https://developer.android.com/develop/ui/views/layout/webapps/webview#UsingJavaScript
-    mWebView.addJavascriptInterface(new FromTracker(this), "Android");
+        mWebView.addJavascriptInterface(new FromTracker(this), "Android");
 
         mWebView.loadUrl(url);
     }

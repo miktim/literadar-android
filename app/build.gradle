@@ -7,10 +7,10 @@ android {
 
     defaultConfig {
         applicationId "org.miktim.literadar"
-        minSdk 21
+        minSdk 23
         targetSdk 33
 //        targetSdk 29
-        versionCode 17
+        versionCode 18
         versionName "1.0"
         setProperty("archivesBaseName", "literadar-$versionName.$versionCode")
 

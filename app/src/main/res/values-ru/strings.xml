@@ -3,8 +3,8 @@
     <string name="keyFmt">Ключ подписи: %s bit</string>
     <string name="key_dateFmt">Создан: %tF</string>
     <string name="aliasLbl">Псевдоним: </string>
-    <string name="all_interfaces">Все доступные</string>
-    <string name="int_unavailable">/недоступен</string>
+    <string name="intf_any">Доступный</string>
+    <string name="intf_unavailable">/недоступен</string>
     <string name="mode_selectLbl">Выбор режима:</string>
     <string-array name="mode_array">
         <item>Только трекер</item>

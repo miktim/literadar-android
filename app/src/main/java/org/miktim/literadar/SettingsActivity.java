@@ -19,6 +19,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.AdapterView;
@@ -43,9 +44,11 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
@@ -197,7 +200,41 @@ public class SettingsActivity extends AppActivity
         }
         mAddressEdt.setText(address);
     }
+    public static InetAddress getInetAddress(NetworkInterface ni) throws UnknownHostException {
+        InetAddress ia = null;
+        for (Enumeration<InetAddress> e = ni.getInetAddresses(); e.hasMoreElements();) {
+            ia = e.nextElement();
+            if(ia != null) ia = InetAddress.getByAddress(ia.getAddress());
+            if (ia instanceof Inet4Address) {
+                break;
+            }
+        }
+        return ia;
+    }
 
+    String[] getInterfaceList(String iName) {
+        ArrayList<String> niList = new ArrayList<>();
+        String all = getString(R.string.intf_any);
+        niList.add(all);
+        boolean iNameExists = (iName == null || iName.isEmpty() || iName.equals(all));
+        try {
+            Enumeration<NetworkInterface> niEnum = NetworkInterface.getNetworkInterfaces();
+            while (niEnum.hasMoreElements()) {
+                NetworkInterface ni = niEnum.nextElement();
+                Log.d("getInterfaceList", ni.getDisplayName() + " " + getInetAddress(ni));
+                if (ni.supportsMulticast() && !ni.isLoopback() && ni.isUp()) {
+                    if(!iNameExists && iName.equals(ni.getDisplayName())) iNameExists = true;
+                    String entry = ni.getDisplayName() + getInetAddress(ni);
+                    niList.add(entry);
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if(!iNameExists) niList.add(iName + getString(R.string.intf_unavailable));
+        return niList.toArray((new String[0]));
+    }
+/*
     String[] getInterfaceList(String iName) {
         ArrayList<String> niList = new ArrayList<>();
         niList.add(getString(R.string.all_interfaces));
@@ -217,7 +254,7 @@ public class SettingsActivity extends AppActivity
         }
         return niList.toArray((new String[0]));
     }
-
+*/
     public void onBtnCopyTagClick(View v) {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         try {
@@ -291,7 +328,6 @@ public class SettingsActivity extends AppActivity
         // Geolocation
         mSettings.locations.setMinTime(checkNumberView(R.id.minTimeEdt, 1));
 //        mSettings.locations.minDistance = checkNumberView(R.id.minDistanceEdt, 0);
-//        mSettings.locations.timeout = checkNumberView(R.id.timeoutEdt,mSettings.locations.minTime * 2);
         fillFavoritesSettings();
         return true;
     }

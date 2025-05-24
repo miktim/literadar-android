@@ -4,8 +4,8 @@
     <string name="keyFmt">Signature key: %s bit</string>
     <string name="key_dateFmt">Created: %tF</string>
     <string name="aliasLbl">Alias: </string>
-    <string name="all_interfaces">All available</string>
-    <string name="int_unavailable">/unavailable</string>
+    <string name="intf_any">Available</string>
+    <string name="intf_unavailable">/unavailable</string>
     <string name="mode_selectLbl">Select mode:</string>
     <string-array name="mode_array">
         <item>Tracker only</item>

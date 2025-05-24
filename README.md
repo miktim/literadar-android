@@ -71,7 +71,7 @@ Encryption algorithm: RSA 512 bit.
 Digital signature: SHA256withRSA  
 Tag: base64 encoded SHA1 hash of the binary representation of the public key. It is passed to the tracker as an identifier.  
 Default name: hex encoded 32 bit hash of the tag.  
-UDP multicast group: 224.0.9.090:9099, time-to-live = 20
+UDP multicast group: 224.0.1.199:9099, time-to-live = 20  
 
 #### UDP packet structure  
 Data is packed in BigEndian order. Double values ​​are converted to IEEE 754 long.  
