@@ -4,7 +4,7 @@
     <string name="keyFmt">Signature key: %s bit</string>
     <string name="key_dateFmt">Created: %tF</string>
     <string name="aliasLbl">Alias: </string>
-    <string name="intf_any">Available</string>
+    <string name="intf_any">Any available</string>
     <string name="intf_unavailable">/unavailable</string>
     <string name="mode_selectLbl">Select mode:</string>
     <string-array name="mode_array">

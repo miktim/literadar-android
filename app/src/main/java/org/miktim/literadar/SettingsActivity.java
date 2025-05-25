@@ -214,9 +214,8 @@ public class SettingsActivity extends AppActivity
 
     String[] getInterfaceList(String iName) {
         ArrayList<String> niList = new ArrayList<>();
-        String all = getString(R.string.intf_any);
-        niList.add(all);
-        boolean iNameExists = (iName == null || iName.isEmpty() || iName.equals(all));
+        niList.add(getString(R.string.intf_any));
+        boolean iNameExists = (iName == null || iName.isEmpty() || iName.length() > 7);
         try {
             Enumeration<NetworkInterface> niEnum = NetworkInterface.getNetworkInterfaces();
             while (niEnum.hasMoreElements()) {
@@ -286,11 +285,13 @@ public class SettingsActivity extends AppActivity
         int spinnerId = parent.getId();
         if(spinnerId == R.id.modeSpn) {
             modeDependedSettings(position);
+// todo: move to fillSettings
             mSettings.setMode(position);
             if(position == Settings.MODE_TRACKER_ONLY) mSettings.setTrackerEnabled(true);
         } else if(spinnerId == R.id.interfaceSpn) {
             try {
-                mSettings.network.setInterface(
+// todo: move to fillSettings
+                mSettings.network.setInterface( position == 0 ? "" :
                         spinner.getSelectedItem().toString().split("/")[0]);
             } catch (SocketException e) {
                 e.printStackTrace();

@@ -1,7 +1,7 @@
 ## LiteRadar Android transponder, MIT (c) 2022-2025 @miktim [ru](./README-RU.md)
 
 ### Purpose
-Sharing in a group or transmitting your own location to the server via UDP protocol.  
+LiteRadar Android transponder: sharing in a group or transmitting your own location to the server via UDP protocol.  
 
 Latest .apk build here: [./app/release/](./app/release/)  
 
@@ -53,7 +53,7 @@ The geolocation interval sets the frequency at which location is determined and 
 <img
   src="./markdown/favorites.png"
   alt="Settings" height=400 width=240/>  
-UDP Group member mode only. The tab contains a list of transponders with their name (alias), data packet expiration date and tag. The list changes as data is received.  
+For UDP group member mode or LiteRadar server clients. The tab contains a list of transponders with their name (alias), data packet expiration date and tag. The list changes as data is received.  
 Provides the ability to mark a transponder as favorite and change its name for the tracker or add a transponder by pasting the received tag from the clipboard using the button on the right.  
 Unselected entries are deleted as the data packet expires.  
 The "favorites only" checkbox filters the display of transponders by the tracker.  

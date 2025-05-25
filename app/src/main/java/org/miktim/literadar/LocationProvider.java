@@ -1,5 +1,19 @@
 /*
  * LiteRadar LocationProvider, MIT (c) 2021-2025 miktim@mail.ru
+ *  Constructor:
+ *    LocationProvider(Context context, LocationProvider.Handler handler);
+ *  Interface:
+ *    LocationProvider.Handler {
+ *       void onLocationChanged(Location location);
+ *          - location can be null
+ *       void onOutOfService(); }
+ *  Methods:
+ *    void connect(long minTimeMillis, float minDistanceMeters);
+ *    void disconnect();
+ *    boolean isOutOfService();
+ *    location getLastLocation();
+ *      - returns last detected or last known location
+ *
  * Thanks to:
  *   developer.android.com
  *   stackoverflow.com
@@ -73,7 +87,6 @@ public class LocationProvider {
             if(listener.isEnabled()) return false;
         }
         return true;
-//        return mEnabledProviders == 0;
     }
 
     @SuppressLint("MissingPermission")
@@ -82,7 +95,7 @@ public class LocationProvider {
         disconnect();
 
         for (ProviderListener listener : mListeners) {
-            listener.connectListener(minTime-100, minDistance);//todo
+            listener.connectListener(minTime, minDistance);//todo
         }
         renewLocation();
         mTimer = new Timer();
