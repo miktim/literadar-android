@@ -63,7 +63,7 @@ The tracker displays the location of transponders on the map. Own, favorite and 
 For more information about the tracker, see README https://github.com/miktim/mini-tracker  
 
 
-### Release notice  
+### Release Notes  
 Tracker settings are stored in the application's settings.json file.  
 In case of a crash, a fatal.log file is created.  
 
