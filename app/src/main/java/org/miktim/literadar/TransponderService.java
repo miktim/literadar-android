@@ -24,7 +24,7 @@ import org.miktim.udpsocket.UdpSocket;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
-import java.net.MulticastSocket;
+import java.net.NetworkInterface;
 import java.security.GeneralSecurityException;
 import java.util.Arrays;
 
@@ -42,6 +42,7 @@ public class TransponderService extends Service {
             if (location == null) {
                 return;
             }
+
             mOutgoingPacket.updateLocation(
                     System.currentTimeMillis(),//location.getTime(),
                     mSettings.locations.getMinTime() * 2,
@@ -51,7 +52,8 @@ public class TransponderService extends Service {
             try {
                 packetToTracker(mOutgoingPacket);
                 if (mUdpSocket != null && mSettings.getMode() != Settings.MODE_TRACKER_ONLY) {
-                    mUdpSocket.send(mOutgoingPacket.pack());
+                    byte[] packetBytes = mOutgoingPacket.pack();
+                    mUdpSocket.send(packetBytes);
                     resetError(R.string.err_network);
                 }
             } catch (java.security.GeneralSecurityException e) {
@@ -197,25 +199,27 @@ public class TransponderService extends Service {
         int mode = mSettings.getMode();
         if (mode != Settings.MODE_TRACKER_ONLY) {
             try {
-                InetSocketAddress rsa = (InetSocketAddress) mSettings.network.getRemoteSocket(mode);
-                InetSocketAddress lsa = (InetSocketAddress) mSettings.network.getLocalSocket(mode);
-                mUdpSocket = new UdpSocket(rsa.getPort(), rsa.getAddress(), lsa);
-                mUdpSocket.setReuseAddress(true);
-                if(rsa.getAddress().isMulticastAddress()) {
-                    ((MulticastSocket)mUdpSocket.getDatagramSocket()).setTimeToLive(mSettings.network.getTimeToLive());
+                InetSocketAddress remoteSocket = mSettings.network.getRemoteSocket(mode);
+                NetworkInterface intF = mSettings.network.getNeworkInterface();
+// intF is null if unavailable
+// todo check interface available
+                mUdpSocket = new UdpSocket(remoteSocket, intF);
+                if(mUdpSocket.isMulticast()) {
+                    mUdpSocket.setTimeToLive(mSettings.network.getTimeToLive());
                 }
                 if (mode == Settings.MODE_MULTICAST_MEMBER) {
                     mUdpSocket.receive(mUdpSocketHandler);
                 }
             } catch (IOException e) {
+// todo check interface available
                 e.printStackTrace();
                 MainActivity.fatal(this, e);
             }
         }
-        // todo: too small minTime = 5 sec
         mLocationProvider.connect(
                 mSettings.locations.getMinTime() * 1000L,
-                mSettings.locations.getMinDistance());
+//                0); // todo min distance
+              mSettings.locations.getMinDistance());
         mNotifier.notifyTitle(notificationTitle());
     }
 

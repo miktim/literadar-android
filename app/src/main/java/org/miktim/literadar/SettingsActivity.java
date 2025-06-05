@@ -200,6 +200,7 @@ public class SettingsActivity extends AppActivity
         }
         mAddressEdt.setText(address);
     }
+
     public static InetAddress getInetAddress(NetworkInterface ni) throws UnknownHostException {
         InetAddress ia = null;
         for (Enumeration<InetAddress> e = ni.getInetAddresses(); e.hasMoreElements();) {
@@ -220,7 +221,7 @@ public class SettingsActivity extends AppActivity
             Enumeration<NetworkInterface> niEnum = NetworkInterface.getNetworkInterfaces();
             while (niEnum.hasMoreElements()) {
                 NetworkInterface ni = niEnum.nextElement();
-                Log.d("getInterfaceList", ni.getDisplayName() + " " + getInetAddress(ni));
+//                Log.d("getInterfaceList", ni.getDisplayName() + " " + getInetAddress(ni));
                 if (ni.supportsMulticast() && !ni.isLoopback() && ni.isUp()) {
                     if(!iNameExists && iName.equals(ni.getDisplayName())) iNameExists = true;
                     String entry = ni.getDisplayName() + getInetAddress(ni);
@@ -233,27 +234,7 @@ public class SettingsActivity extends AppActivity
         if(!iNameExists) niList.add(iName + getString(R.string.intf_unavailable));
         return niList.toArray((new String[0]));
     }
-/*
-    String[] getInterfaceList(String iName) {
-        ArrayList<String> niList = new ArrayList<>();
-        niList.add(getString(R.string.all_interfaces));
-        try {
-            Enumeration<NetworkInterface> niEnum = NetworkInterface.getNetworkInterfaces();
-            while (niEnum.hasMoreElements()) {
-                NetworkInterface ni = niEnum.nextElement();
-                String niDn = ni.getDisplayName();
-                InetAddress ia = Network.getInet4Address(ni);
-                if ((ia != null && !ia.isLoopbackAddress()) || niDn.equals(iName)) {
-                    niList.add(niDn +
-                            (ia != null ? ia.toString() : getString(R.string.int_unavailable)));
-                }
-            }
-        } catch (SocketException e) {
-            e.printStackTrace();
-        }
-        return niList.toArray((new String[0]));
-    }
-*/
+
     public void onBtnCopyTagClick(View v) {
         ClipboardManager clipboard = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
         try {
@@ -417,8 +398,8 @@ public class SettingsActivity extends AppActivity
         TextView getExpired(TableRow row) {
             return (TextView)row.getChildAt(2);
         }
-        EditText getTag(TableRow row) {
-            return (EditText)row.getChildAt(3);
+        TextView getTag(TableRow row) {
+            return (TextView)row.getChildAt(3);
         }
         void fill() {
             Favorites.Entry[] entries = mSettings.favorites.listEntries();

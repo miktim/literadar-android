@@ -31,5 +31,6 @@
     <string name="favorites_onlyLbl">только избранные</string>
     <string name="toastClipTag">Тег в буфере обмена</string>
     <string name="err_settings_write">Ошибка записи настроек.</string>
+    <string name="minDistanceLbl">"min Дистанция (м): "</string>
 
 </resources>

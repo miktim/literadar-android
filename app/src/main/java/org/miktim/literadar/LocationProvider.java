@@ -12,7 +12,7 @@
  *    void disconnect();
  *    boolean isOutOfService();
  *    location getLastLocation();
- *      - returns last detected or last known location
+ *      - returns last detected location or null
  *
  * Thanks to:
  *   developer.android.com
@@ -25,11 +25,12 @@ import static java.lang.String.format;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.util.Log;
 
+import androidx.core.app.ActivityCompat;
 import androidx.core.location.LocationListenerCompat;
 
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ public class LocationProvider {
 
     public interface Handler {
         void onLocationChanged(Location location);
+
         void onOutOfLocationService();
     }
 
@@ -56,31 +58,37 @@ public class LocationProvider {
     long mLastTime = 0;
     private Timer mTimer;
 
-    public LocationProvider(Context context, Handler handler){
+    public LocationProvider(Context context, Handler handler) {
         mContext = context;
         mHandler = handler;
 
         mLocationManager = (LocationManager) mContext.getSystemService(Context.LOCATION_SERVICE);
         List<String> names = mLocationManager.getProviders(false);
         mEnabledProviders = 0;
-        for(String providerName : names) {
-            if(providerName.equals(LocationManager.PASSIVE_PROVIDER)) continue;
+        for (String providerName : names) {
+            if (providerName.equals(LocationManager.PASSIVE_PROVIDER)) continue;
             mListeners.add(new ProviderListener(providerName));
-            if(mLocationManager.isProviderEnabled(providerName))
+            if (mLocationManager.isProviderEnabled(providerName))
                 mEnabledProviders++;
         }
     }
-    void renewLocation(){
- //       synchronized(mLocation) { // todo
-            mLocation = new Location("");
-            mLocation.setAccuracy(Float.MAX_VALUE);
-            mLastTime = System.currentTimeMillis();
- //       }
+
+    void renewLocation() {
+        //       synchronized(mLocation) { // todo
+        mLocation = new Location("");
+        mLocation.setAccuracy(Float.MAX_VALUE);
+        mLastTime = System.currentTimeMillis();
+        //       }
     }
 
+    @SuppressLint("MissingPermission")
     public Location getLastLocation() {
         return mLastLocation;
+
+//        if (mLastLocation != null) return mLastLocation;
+//        return mLocationManager.getLastKnownLocation(LocationManager.PASSIVE_PROVIDER);
     }
+
     public boolean isOutOfService() {
         if(mListeners == null) return true;
         for (ProviderListener listener : mListeners) {

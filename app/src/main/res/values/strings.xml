@@ -29,6 +29,7 @@
     <string name="section_generalLbl">Settings</string>
     <string name="favorites_onlyLbl">favorites only</string>
     <string name="minTimeLbl">"Geolocation interval (sec): "</string>
+    <string name="minDistanceLbl">"min Distance (m): "</string>
     <string name="section_favoritesLbl">Favorites</string>
     <string name="toastClipTag">"The tag in the clipboard"</string>
 

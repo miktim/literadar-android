@@ -10,7 +10,7 @@ android {
         minSdk 23
         targetSdk 33
 //        targetSdk 29
-        versionCode 19
+        versionCode 20
         versionName "1.0"
         setProperty("archivesBaseName", "literadar-$versionName.$versionCode")
 
