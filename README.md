@@ -9,7 +9,7 @@ Latest .apk build here: [./app/release/](./app/release/)
 Android 6+  
 Screen resolution 800x480 and higher.  
 
-### Restrictions  
+### Limitations
 Network features may be limited by your cellular provider's policies or Android device capabilities.  
 
 ### General information  
