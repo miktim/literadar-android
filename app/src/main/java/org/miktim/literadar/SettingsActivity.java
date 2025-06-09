@@ -347,11 +347,11 @@ public class SettingsActivity extends AppActivity
         @Override
         public void onTabSelected(TabLayout.Tab tab) {
             int tabPos = tab.getPosition();
-            int sectionRid = mSectionIds[tabPos];
-            if(sectionRid == 0) {
+            if(tabPos == 2) {
                 exitLiteRadar();
                 return;
             }
+            int sectionRid = mSectionIds[tabPos];
             setViewVisibility(sectionRid,true);
         }
 

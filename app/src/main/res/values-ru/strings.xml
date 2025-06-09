@@ -13,10 +13,10 @@
     </string-array>
     <string name="tracker_showLbl">показать трекер</string>
     <string name="int_selectLbl">Выбор интерфейса:</string>
-    <string name="addressLbl">IP адрес:</string>
+    <string name="addressLbl">Адрес:порт:</string>
     <string name="exitLbl">Выход из LiteRadar</string>
     <string name="cancelLbl">Отмена</string>
-    <string name="restartLbl">Сохранить</string>
+    <string name="restartLbl">Рестарт</string>
     <string name="err_wrong_address">Пропущен или неверный адрес!</string>
     <string name="err_address_required">Требуется IP address:port  !</string>
     <string name="err_settings_read">Ошибка чтения настроек.</string>

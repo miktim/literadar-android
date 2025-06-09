@@ -14,10 +14,10 @@
     </string-array>
     <string name="tracker_showLbl">show tracker</string>
     <string name="int_selectLbl">Select interface:</string>
-    <string name="addressLbl">IP address:</string>
+    <string name="addressLbl">Address:port:</string>
     <string name="exitLbl">Exit LiteRadar</string>
     <string name="cancelLbl">Cancel</string>
-    <string name="restartLbl">Save &amp; Restart</string>
+    <string name="restartLbl">Restart</string>
     <string name="err_wrong_address">Wrong or missed address!</string>
     <string name="err_address_required">"IP address:port required! "</string>
     <string name="err_settings_read">Settings file read error.</string>

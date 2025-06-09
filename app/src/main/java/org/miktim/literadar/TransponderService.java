@@ -23,6 +23,9 @@ import org.miktim.udpsocket.UdpSocket;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.security.GeneralSecurityException;
@@ -207,19 +210,18 @@ public class TransponderService extends Service {
                 if(mUdpSocket.isMulticast()) {
                     mUdpSocket.setTimeToLive(mSettings.network.getTimeToLive());
                 }
-                if (mode == Settings.MODE_MULTICAST_MEMBER) {
+                if (mode == Settings.MODE_MULTICAST_MEMBER || mUdpSocket.isMulticast()) {
                     mUdpSocket.receive(mUdpSocketHandler);
                 }
             } catch (IOException e) {
-// todo check interface available
                 e.printStackTrace();
                 MainActivity.fatal(this, e);
             }
         }
         mLocationProvider.connect(
                 mSettings.locations.getMinTime() * 1000L,
-//                0); // todo min distance
-              mSettings.locations.getMinDistance());
+                0); // todo? min distance
+//              mSettings.locations.getMinDistance());
         mNotifier.notifyTitle(notificationTitle());
     }
 
